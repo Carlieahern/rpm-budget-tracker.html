@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RPM Budget Tracker 2027</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12; --surface: #141720; --surface2: #1c2030; --surface3: #242840;
+    --border: #2a2f45; --border2: #353c58; --accent: #4f7cff; --accent2: #7c5cfc;
+    --green: #2dd4a0; --yellow: #f5c842; --red: #ff5c5c;
+    --text: #e8eaf0; --text2: #8b92a8; --text3: #5a6075;
+    --font: 'DM Sans', sans-serif; --mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-logo { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .header-title { font-size: 14px; font-weight: 600; }
+  .header-badge { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; font-family: var(--mono); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .layout { display: flex; height: calc(100vh - 56px); }
+  .sidebar { width: 210px; background: var(--surface); border-right: 1px solid var(--border); padding: 16px 0; flex-shrink: 0; overflow-y: auto; }
+  .sidebar-section { padding: 0 12px; margin-bottom: 8px; }
+  .sidebar-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; padding: 0 8px; margin-bottom: 4px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--text2); font-size: 13px; font-weight: 500; transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(79,124,255,0.12); color: var(--accent); }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+  .nav-count { margin-left: auto; background: var(--surface3); color: var(--text2); font-size: 10px; font-family: var(--mono); padding: 1px 6px; border-radius: 10px; }
+  .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 12px; }
+  .main { flex: 1; overflow-y: auto; background: var(--bg); }
+  .stats-bar { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+  .stat-item { background: var(--surface); padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+  .stat-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .stat-icon.blue { background: rgba(79,124,255,0.12); } .stat-icon.green { background: rgba(45,212,160,0.12); }
+  .stat-icon.yellow { background: rgba(245,200,66,0.12); } .stat-icon.purple { background: rgba(124,92,252,0.12); }
+  .stat-value { font-size: 22px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+  .stat-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .toolbar { padding: 12px 24px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+  .search-wrap { position: relative; flex: 1; min-width: 180px; }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; }
+  .search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px 7px 32px; color: var(--text); font-family: var(--font); font-size: 13px; outline: none; }
+  .search-input:focus { border-color: var(--accent); } .search-input::placeholder { color: var(--text3); }
+  .filter-select { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: var(--text); font-family: var(--font); font-size: 13px; outline: none; cursor: pointer; }
+  .filter-select:focus { border-color: var(--accent); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; white-space: nowrap; }
+  .btn-primary { background: var(--accent); color: white; } .btn-primary:hover { background: #3d6aee; }
+  .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); } .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: rgba(255,92,92,0.1); border: 1px solid rgba(255,92,92,0.2); color: var(--red); } .btn-danger:hover { background: rgba(255,92,92,0.2); }
+  .bulk-bar { display: none; align-items: center; gap: 12px; padding: 8px 24px; background: rgba(79,124,255,0.08); border-bottom: 1px solid rgba(79,124,255,0.2); font-size: 13px; color: var(--accent); }
+  .bulk-bar.visible { display: flex; }
+  .bulk-count { font-weight: 600; font-family: var(--mono); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  thead { background: var(--surface); position: sticky; top: 0; z-index: 10; }
+  th { padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+  th:hover { color: var(--text2); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tr:hover td { background: rgba(255,255,255,0.02); } tr.selected td { background: rgba(79,124,255,0.06); }
+  .cell-property { font-weight: 500; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+  .cell-code { font-family: var(--mono); font-size: 11px; color: var(--text3); background: var(--surface2); padding: 2px 5px; border-radius: 4px; }
+  .cell-owner { color: var(--text2); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+  .cell-date { font-family: var(--mono); font-size: 11px; color: var(--text2); white-space: nowrap; }
+  .cell-date.empty { color: var(--text3); font-style: italic; font-family: var(--font); font-size: 12px; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  .badge-conventional { background: rgba(79,124,255,0.12); color: #7fa8ff; }
+  .badge-affordable { background: rgba(45,212,160,0.12); color: var(--green); }
+  .badge-commercial { background: rgba(245,200,66,0.12); color: var(--yellow); }
+  .badge-managed { background: rgba(45,212,160,0.08); color: var(--green); }
+  .badge-dispo { background: rgba(255,92,92,0.08); color: var(--red); }
+  .yes-no { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; }
+  .yes-no.yes { color: var(--green); } .yes-no.no { color: var(--red); } .yes-no.unset { color: var(--text3); }
+  .btn-edit-row { background: none; border: 1px solid var(--border); color: var(--text3); padding: 3px 9px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+  .btn-edit-row:hover { border-color: var(--accent); color: var(--accent); }
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; border-top: 1px solid var(--border); background: var(--surface); }
+  .pagination-info { font-size: 12px; color: var(--text3); }
+  .pagination-controls { display: flex; gap: 4px; align-items: center; }
+  .page-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); padding: 4px 9px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: var(--font); }
+  .page-btn:hover { border-color: var(--accent); color: var(--accent); } .page-btn.active { background: var(--accent); border-color: var(--accent); color: white; } .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 760px; max-height: 90vh; overflow-y: auto; }
+  .modal-header { padding: 18px 24px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--surface); z-index: 1; }
+  .modal-title { font-size: 15px; font-weight: 600; } .modal-subtitle { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .modal-close { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 2px; line-height: 1; } .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 18px 24px; }
+  .modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; gap: 10px; position: sticky; bottom: 0; background: var(--surface); }
+  .form-section { margin-bottom: 22px; }
+  .form-section-title { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--border); }
+  .form-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+  .form-grid.cols3 { grid-template-columns: repeat(3,1fr); } .form-grid.cols1 { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-label { font-size: 11px; font-weight: 500; color: var(--text2); }
+  .form-input, .form-select, .form-textarea { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: var(--text); font-family: var(--font); font-size: 13px; outline: none; width: 100%; transition: border-color 0.2s; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 70px; }
+  .radio-group { display: flex; gap: 14px; align-items: center; padding-top: 6px; }
+  .radio-option { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--text2); }
+  .radio-option input { accent-color: var(--accent); }
+  #report-view { display: none; padding: 24px; }
+  .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .report-title { font-size: 20px; font-weight: 600; } .report-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+  .report-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 24px; }
+  .report-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  .report-card-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+  .report-card-value { font-size: 26px; font-weight: 600; font-family: var(--mono); }
+  .report-card-value.blue { color: var(--accent); } .report-card-value.green { color: var(--green); } .report-card-value.yellow { color: var(--yellow); }
+  .report-card-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .progress-bar { height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; }
+  .empty-state { text-align: center; padding: 60px 24px; color: var(--text3); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; } .empty-title { font-size: 15px; color: var(--text2); margin-bottom: 6px; }
+  .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(13,15,18,0.8); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+  .loading-overlay.visible { display: flex; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--text2); font-size: 13px; }
+  .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 8px; }
+  .toast { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); animation: slideIn 0.3s ease; max-width: 300px; }
+  .toast.success { border-color: rgba(45,212,160,0.3); } .toast.error { border-color: rgba(255,92,92,0.3); }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  @media (max-width: 768px) { .stats-bar { grid-template-columns: repeat(2,1fr); } .form-grid, .form-grid.cols3 { grid-template-columns: 1fr; } .report-grid { grid-template-columns: 1fr; } .sidebar { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">📊</div>
+    <span class="header-title">RPM Budget Tracker</span>
+    <span class="header-badge">2027</span>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Add Property</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Views</div>
+      <button class="nav-item active" onclick="switchView('properties')" id="nav-properties"><span class="nav-icon">🏢</span> Properties <span class="nav-count" id="nav-count">0</span></button>
+      <button class="nav-item" onclick="switchView('report')" id="nav-report"><span class="nav-icon">📈</span> Report</button>
+    </div>
+    <hr class="sidebar-divider">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Quick Filters</div>
+      <button class="nav-item" onclick="quickFilter('all')"><span class="nav-icon">🔘</span> All Properties</button>
+      <button class="nav-item" onclick="quickFilter('incomplete')"><span class="nav-icon">⏳</span> Incomplete</button>
+      <button class="nav-item" onclick="quickFilter('complete')"><span class="nav-icon">✅</span> Fully Complete</button>
+      <button class="nav-item" onclick="quickFilter('conventional')"><span class="nav-icon">🏗️</span> Conventional</button>
+      <button class="nav-item" onclick="quickFilter('affordable')"><span class="nav-icon">🏘️</span> Affordable</button>
+    </div>
+    <hr class="sidebar-divider">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Data</div>
+      <button class="nav-item" onclick="exportCSV()"><span class="nav-icon">📥</span> Export CSV</button>
+      <button class="nav-item" onclick="openModal('import-modal')"><span class="nav-icon">📤</span> Import CSV</button>
+    </div>
+  </div>
+
+  <div class="main" id="main-content">
+    <div id="properties-view">
+      <div class="stats-bar">
+        <div class="stat-item"><div class="stat-icon blue">🏢</div><div><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Properties</div></div></div>
+        <div class="stat-item"><div class="stat-icon green">✅</div><div><div class="stat-value" id="stat-complete">0</div><div class="stat-label">Budget Sent</div></div></div>
+        <div class="stat-item"><div class="stat-icon yellow">📋</div><div><div class="stat-value" id="stat-forecast">0</div><div class="stat-label">Forecast Done</div></div></div>
+        <div class="stat-item"><div class="stat-icon purple">✔️</div><div><div class="stat-value" id="stat-approved">0</div><div class="stat-label">Client Approved</div></div></div>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" class="search-input" id="search-input" placeholder="Search property, owner, code, manager..." oninput="filterTable()"></div>
+        <select class="filter-select" id="filter-owner" onchange="filterTable()"><option value="">All Owners</option></select>
+        <select class="filter-select" id="filter-rvp" onchange="filterTable()"><option value="">All RVPs</option></select>
+        <select class="filter-select" id="filter-status" onchange="filterTable()"><option value="">All Statuses</option><option>RPM Managed</option><option>Dispositioning</option></select>
+      </div>
+      <div class="bulk-bar" id="bulk-bar">
+        <span><span class="bulk-count" id="bulk-count">0</span> selected</span>
+        <button class="btn btn-secondary" onclick="openBulkEdit()">✏️ Bulk Edit Dates</button>
+        <button class="btn btn-danger" onclick="clearSelection()">✕ Clear</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:36px;"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this)"></th>
+            <th onclick="sortTable('name')">Property ↕</th>
+            <th onclick="sortTable('code')">Code ↕</th>
+            <th onclick="sortTable('owner')">Owner ↕</th>
+            <th onclick="sortTable('specialty')">Type ↕</th>
+            <th onclick="sortTable('status')">Status ↕</th>
+            <th onclick="sortTable('rvp')">RVP ↕</th>
+            <th onclick="sortTable('forecastCompleted')">Forecast ↕</th>
+            <th onclick="sortTable('firstDraftActual')">1st Draft ↕</th>
+            <th onclick="sortTable('finalSentActual')">Final Sent ↕</th>
+            <th onclick="sortTable('metPMA')">PMA Met ↕</th>
+            <th>Actions</th>
+          </tr></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="pagination"><span class="pagination-info" id="pagination-info"></span><div class="pagination-controls" id="pagination-controls"></div></div>
+    </div>
+
+    <div id="report-view">
+      <div class="report-header">
+        <div><div class="report-title">2027 Budget Cycle Report</div><div class="report-sub" id="report-date"></div></div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+          <button class="btn btn-primary" onclick="window.print()">🖨️ Print</button>
+        </div>
+      </div>
+      <div class="report-grid" id="report-cards"></div>
+      <div id="report-owner-breakdown"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PROPERTY MODAL -->
+<div class="modal-overlay" id="property-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title" id="modal-title">Add Property</div><div class="modal-subtitle" id="modal-subtitle"></div></div>
+      <button class="modal-close" onclick="closeModal('property-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="form-section">
+        <div class="form-section-title">Property Information</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Property Name *</label><input type="text" class="form-input" id="f-name" placeholder="e.g. 10X Addison Place"></div>
+          <div class="form-group"><label class="form-label">Property Code *</label><input type="text" class="form-input" id="f-code" placeholder="e.g. 42824"></div>
+          <div class="form-group"><label class="form-label">Property Owner</label><input type="text" class="form-input" id="f-owner"></div>
+          <div class="form-group"><label class="form-label">PMA Effective Date</label><input type="date" class="form-input" id="f-pma"></div>
+          <div class="form-group"><label class="form-label">Primary Specialty</label><select class="form-select" id="f-specialty"><option value="">Select...</option><option>Conventional</option><option>Affordable</option><option>Commercial</option></select></div>
+          <div class="form-group"><label class="form-label">System</label><select class="form-select" id="f-system"><option value="">Select...</option><option>RPM Yardi</option><option>RPM ONEsite</option><option>RPM Entrata</option><option>Client Hosted Yardi</option><option>Client Hosted ONEsite</option></select></div>
+          <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="f-status"><option value="">Select...</option><option>RPM Managed</option><option>Dispositioning</option></select></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Operations Team</div>
+        <div class="form-grid cols3">
+          <div class="form-group"><label class="form-label">CM Name</label><input type="text" class="form-input" id="f-cm"></div>
+          <div class="form-group"><label class="form-label">Sr CM Name</label><input type="text" class="form-input" id="f-srcm"></div>
+          <div class="form-group"><label class="form-label">RM Name</label><input type="text" class="form-input" id="f-rm"></div>
+          <div class="form-group"><label class="form-label">Sr RM Name</label><input type="text" class="form-input" id="f-srrm"></div>
+          <div class="form-group"><label class="form-label">RVP Name</label><input type="text" class="form-input" id="f-rvp"></div>
+          <div class="form-group"><label class="form-label">SVP Ops Name</label><input type="text" class="form-input" id="f-svp"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Target Dates</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Forecast Target</label><input type="date" class="form-input" id="f-forecast-target"></div>
+          <div class="form-group"><label class="form-label">First Draft to RVP Target</label><input type="date" class="form-input" id="f-draft-target"></div>
+          <div class="form-group"><label class="form-label">RVP Return to RM Target</label><input type="date" class="form-input" id="f-rvp-return-target"></div>
+          <div class="form-group"><label class="form-label">Return to CM Target</label><input type="date" class="form-input" id="f-cm-return-target"></div>
+          <div class="form-group"><label class="form-label">RM Final Review Target</label><input type="date" class="form-input" id="f-rm-review-target"></div>
+          <div class="form-group"><label class="form-label">Final to Client Target</label><input type="date" class="form-input" id="f-final-target"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Actual Completion Dates</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Forecast Completed</label><input type="date" class="form-input" id="f-forecast"></div>
+          <div class="form-group"><label class="form-label">First Draft Sent to RVP</label><input type="date" class="form-input" id="f-draft"></div>
+          <div class="form-group"><label class="form-label">RVP Returned to RM</label><input type="date" class="form-input" id="f-rvp-return"></div>
+          <div class="form-group"><label class="form-label">Returned to CM</label><input type="date" class="form-input" id="f-cm-return"></div>
+          <div class="form-group"><label class="form-label">RM Final Review Done</label><input type="date" class="form-input" id="f-rm-review"></div>
+          <div class="form-group"><label class="form-label">Final Budget Sent to Client</label><input type="date" class="form-input" id="f-final"></div>
+          <div class="form-group"><label class="form-label">Budget Approved by Client</label><input type="date" class="form-input" id="f-approved"></div>
+          <div class="form-group"><label class="form-label">Signed Approval Letter Received</label><input type="date" class="form-input" id="f-approval-letter"></div>
+          <div class="form-group"><label class="form-label">Ticket Opened with Budget Support</label><input type="date" class="form-input" id="f-ticket"></div>
+          <div class="form-group"><label class="form-label">Met PMA Deadline?</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="pma" value="yes" id="f-pma-yes"> Yes</label>
+              <label class="radio-option"><input type="radio" name="pma" value="no" id="f-pma-no"> No</label>
+              <label class="radio-option"><input type="radio" name="pma" value="" id="f-pma-unset" checked> —</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Notes</div>
+        <div class="form-grid cols1"><div class="form-group"><label class="form-label">Comments</label><textarea class="form-textarea" id="f-comments"></textarea></div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('property-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProperty()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK MODAL -->
+<div class="modal-overlay" id="bulk-modal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div><div class="modal-title">Bulk Edit Dates</div><div class="modal-subtitle" id="bulk-modal-sub"></div></div>
+      <button class="modal-close" onclick="closeModal('bulk-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px;">Only filled fields will be updated. Blank fields are ignored.</p>
+      <div class="form-section">
+        <div class="form-section-title">Target Dates</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Forecast Target</label><input type="date" class="form-input" id="b-forecast-target"></div>
+          <div class="form-group"><label class="form-label">First Draft Target</label><input type="date" class="form-input" id="b-draft-target"></div>
+          <div class="form-group"><label class="form-label">RVP Return Target</label><input type="date" class="form-input" id="b-rvp-return-target"></div>
+          <div class="form-group"><label class="form-label">CM Return Target</label><input type="date" class="form-input" id="b-cm-return-target"></div>
+          <div class="form-group"><label class="form-label">RM Review Target</label><input type="date" class="form-input" id="b-rm-review-target"></div>
+          <div class="form-group"><label class="form-label">Final to Client Target</label><input type="date" class="form-input" id="b-final-target"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Actual Dates</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Forecast Completed</label><input type="date" class="form-input" id="b-forecast"></div>
+          <div class="form-group"><label class="form-label">First Draft Sent</label><input type="date" class="form-input" id="b-draft"></div>
+          <div class="form-group"><label class="form-label">RVP Returned</label><input type="date" class="form-input" id="b-rvp-return"></div>
+          <div class="form-group"><label class="form-label">Returned to CM</label><input type="date" class="form-input" id="b-cm-return"></div>
+          <div class="form-group"><label class="form-label">RM Final Review</label><input type="date" class="form-input" id="b-rm-review"></div>
+          <div class="form-group"><label class="form-label">Final Budget Sent</label><input type="date" class="form-input" id="b-final"></div>
+          <div class="form-group"><label class="form-label">Client Approved</label><input type="date" class="form-input" id="b-approved"></div>
+          <div class="form-group"><label class="form-label">Approval Letter</label><input type="date" class="form-input" id="b-approval-letter"></div>
+          <div class="form-group"><label class="form-label">Ticket Opened</label><input type="date" class="form-input" id="b-ticket"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('bulk-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="applyBulkEdit()">Apply to Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <div><div class="modal-title">Import CSV</div><div class="modal-subtitle">Load properties from a CSV file</div></div>
+      <button class="modal-close" onclick="closeModal('import-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px;">Upload a CSV exported from this app. Existing data will be replaced.</p>
+      <input type="file" accept=".csv" id="import-file" style="color:var(--text2);font-size:13px;">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('import-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="processImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading...</div></div>
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const STORAGE_KEY = 'rpm_budget_2027';
+function loadData() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : []; } catch { return []; } }
+function saveData(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch { showToast('Storage error', 'error'); } }
+
+let allProperties = loadData();
+let filteredProperties = [];
+let selectedIds = new Set();
+let currentPage = 1;
+const PAGE_SIZE = 50;
+let sortField = 'name', sortAsc = true, activeQuickFilter = 'all';
+
+window.addEventListener('DOMContentLoaded', () => { populateFilters(); filterTable(); });
+
+function populateFilters() {
+  const owners = [...new Set(allProperties.map(p => p.owner).filter(Boolean))].sort();
+  const rvps = [...new Set(allProperties.map(p => p.rvp).filter(Boolean))].sort();
+  const os = document.getElementById('filter-owner'), rs = document.getElementById('filter-rvp');
+  const ov = os.value, rv = rs.value;
+  os.innerHTML = '<option value="">All Owners</option>' + owners.map(o => `<option>${esc(o)}</option>`).join('');
+  rs.innerHTML = '<option value="">All RVPs</option>' + rvps.map(r => `<option>${esc(r)}</option>`).join('');
+  os.value = ov; rs.value = rv;
+}
+
+function filterTable() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const owner = document.getElementById('filter-owner').value;
+  const rvp = document.getElementById('filter-rvp').value;
+  const status = document.getElementById('filter-status').value;
+  filteredProperties = allProperties.filter(p => {
+    const ms = !search || [p.name,p.code,p.owner,p.rvp,p.rm,p.cm,p.svp,p.srcm,p.srrm].some(v => v&&v.toLowerCase().includes(search));
+    const mo = !owner || p.owner === owner;
+    const mr = !rvp || p.rvp === rvp;
+    const mst = !status || p.status === status;
+    let mq = true;
+    if (activeQuickFilter==='incomplete') mq = !p.finalSentActual;
+    if (activeQuickFilter==='complete') mq = !!p.finalSentActual;
+    if (activeQuickFilter==='conventional') mq = p.specialty==='Conventional';
+    if (activeQuickFilter==='affordable') mq = p.specialty==='Affordable';
+    return ms&&mo&&mr&&mst&&mq;
+  });
+  filteredProperties.sort((a,b) => { const av=(a[sortField]||'').toString(), bv=(b[sortField]||'').toString(); return sortAsc?av.localeCompare(bv):bv.localeCompare(av); });
+  currentPage = 1; renderTable(); updateStats();
+  document.getElementById('nav-count').textContent = filteredProperties.length;
+}
+
+function quickFilter(t) { activeQuickFilter=t; filterTable(); }
+function sortTable(f) { if(sortField===f) sortAsc=!sortAsc; else{sortField=f;sortAsc=true;} filterTable(); }
+
+function renderTable() {
+  const start=(currentPage-1)*PAGE_SIZE, items=filteredProperties.slice(start,start+PAGE_SIZE);
+  const tbody=document.getElementById('table-body');
+  if(!items.length){
+    tbody.innerHTML=`<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No properties found</div><p>Try adjusting filters or add a new property.</p></div></td></tr>`;
+    renderPagination(); return;
+  }
+  tbody.innerHTML=items.map(p=>{
+    const sel=selectedIds.has(p.id), sp=p.specialty||'', st=p.status||'';
+    return `<tr class="${sel?'selected':''}" data-id="${p.id}">
+      <td><input type="checkbox" ${sel?'checked':''} onchange="toggleSelect('${p.id}',this)"></td>
+      <td><div class="cell-property" title="${esc(p.name)}">${esc(p.name)||'—'}</div></td>
+      <td><span class="cell-code">${esc(p.code)||'—'}</span></td>
+      <td><div class="cell-owner" title="${esc(p.owner)}">${esc(p.owner)||'—'}</div></td>
+      <td><span class="badge badge-${sp.toLowerCase()}">${sp||'—'}</span></td>
+      <td><span class="badge ${st==='RPM Managed'?'badge-managed':'badge-dispo'}">${st||'—'}</span></td>
+      <td><div class="cell-owner">${esc(p.rvp)||'—'}</div></td>
+      <td><span class="cell-date ${!p.forecastCompleted?'empty':''}">${fmtDate(p.forecastCompleted)}</span></td>
+      <td><span class="cell-date ${!p.firstDraftActual?'empty':''}">${fmtDate(p.firstDraftActual)}</span></td>
+      <td><span class="cell-date ${!p.finalSentActual?'empty':''}">${fmtDate(p.finalSentActual)}</span></td>
+      <td>${pmaBadge(p.metPMA)}</td>
+      <td><button class="btn-edit-row" onclick="openEditModal('${p.id}')">Edit</button></td>
+    </tr>`;
+  }).join('');
+  renderPagination();
+}
+
+function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function pmaBadge(v){if(v==='yes')return'<span class="yes-no yes">✓ Yes</span>';if(v==='no')return'<span class="yes-no no">✗ No</span>';return'<span class="yes-no unset">—</span>';}
+function fmtDate(v){if(!v)return'—';try{return new Date(v+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch{return v;}}
+
+function renderPagination(){
+  const total=filteredProperties.length, pages=Math.ceil(total/PAGE_SIZE);
+  const s=(currentPage-1)*PAGE_SIZE+1, e=Math.min(currentPage*PAGE_SIZE,total);
+  document.getElementById('pagination-info').textContent=total===0?'No results':`Showing ${s}–${e} of ${total} properties`;
+  const ctrl=document.getElementById('pagination-controls');
+  if(pages<=1){ctrl.innerHTML='';return;}
+  let html=`<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  for(let i=1;i<=pages;i++){
+    if(i===1||i===pages||Math.abs(i-currentPage)<=2) html+=`<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    else if(Math.abs(i-currentPage)===3) html+=`<span style="color:var(--text3);padding:0 4px">…</span>`;
+  }
+  html+=`<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>›</button>`;
+  ctrl.innerHTML=html;
+}
+function goPage(p){const pages=Math.ceil(filteredProperties.length/PAGE_SIZE);if(p<1||p>pages)return;currentPage=p;renderTable();document.getElementById('main-content').scrollTop=0;}
+
+function updateStats(){
+  const src=filteredProperties.length>0?filteredProperties:allProperties;
+  document.getElementById('stat-total').textContent=src.length;
+  document.getElementById('stat-complete').textContent=src.filter(p=>p.finalSentActual).length;
+  document.getElementById('stat-forecast').textContent=src.filter(p=>p.forecastCompleted).length;
+  document.getElementById('stat-approved').textContent=src.filter(p=>p.clientApproved).length;
+}
+
+function toggleSelect(id,cb){if(cb.checked)selectedIds.add(id);else selectedIds.delete(id);updateBulkBar();document.querySelectorAll(`tr[data-id="${id}"]`).forEach(r=>r.classList.toggle('selected',cb.checked));}
+function toggleSelectAll(cb){const items=filteredProperties.slice((currentPage-1)*PAGE_SIZE,currentPage*PAGE_SIZE);items.forEach(p=>{if(cb.checked)selectedIds.add(p.id);else selectedIds.delete(p.id);});renderTable();updateBulkBar();}
+function clearSelection(){selectedIds.clear();renderTable();updateBulkBar();document.getElementById('select-all').checked=false;}
+function updateBulkBar(){const n=selectedIds.size;document.getElementById('bulk-count').textContent=n;document.getElementById('bulk-bar').classList.toggle('visible',n>0);}
+
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+
+function openAddModal(){clearForm();document.getElementById('modal-title').textContent='Add Property';document.getElementById('modal-subtitle').textContent='';document.getElementById('edit-id').value='';openModal('property-modal');}
+function openEditModal(id){const p=allProperties.find(x=>x.id===id);if(!p)return;clearForm();document.getElementById('modal-title').textContent='Edit Property';document.getElementById('modal-subtitle').textContent=p.name||'';document.getElementById('edit-id').value=id;populateForm(p);openModal('property-modal');}
+
+function clearForm(){
+  ['f-name','f-code','f-owner','f-pma','f-specialty','f-system','f-status','f-cm','f-srcm','f-rm','f-srrm','f-rvp','f-svp',
+   'f-forecast-target','f-draft-target','f-rvp-return-target','f-cm-return-target','f-rm-review-target','f-final-target',
+   'f-forecast','f-draft','f-rvp-return','f-cm-return','f-rm-review','f-final','f-approved','f-approval-letter','f-ticket','f-comments']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('f-pma-unset').checked=true;
+}
+function populateForm(p){
+  const s=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  s('f-name',p.name);s('f-code',p.code);s('f-owner',p.owner);s('f-pma',p.pmaDate);
+  s('f-specialty',p.specialty);s('f-system',p.system);s('f-status',p.status);
+  s('f-cm',p.cm);s('f-srcm',p.srcm);s('f-rm',p.rm);s('f-srrm',p.srrm);s('f-rvp',p.rvp);s('f-svp',p.svp);
+  s('f-forecast-target',p.forecastTarget);s('f-draft-target',p.firstDraftTarget);
+  s('f-rvp-return-target',p.rvpReturnTarget);s('f-cm-return-target',p.cmReturnTarget);
+  s('f-rm-review-target',p.rmReviewTarget);s('f-final-target',p.finalTarget);
+  s('f-forecast',p.forecastCompleted);s('f-draft',p.firstDraftActual);
+  s('f-rvp-return',p.rvpReturnActual);s('f-cm-return',p.cmReturnActual);
+  s('f-rm-review',p.rmReviewActual);s('f-final',p.finalSentActual);
+  s('f-approved',p.clientApproved);s('f-approval-letter',p.approvalLetter);s('f-ticket',p.ticketOpened);s('f-comments',p.comments);
+  if(p.metPMA==='yes')document.getElementById('f-pma-yes').checked=true;
+  else if(p.metPMA==='no')document.getElementById('f-pma-no').checked=true;
+  else document.getElementById('f-pma-unset').checked=true;
+}
+
+function saveProperty(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){showToast('Property Name is required','error');return;}
+  const pma=document.querySelector('input[name="pma"]:checked')?.value||'';
+  const editId=document.getElementById('edit-id').value;
+  const prop={
+    id:editId||genId(), name, code:v('f-code'), owner:v('f-owner'), pmaDate:v('f-pma'),
+    specialty:v('f-specialty'), system:v('f-system'), status:v('f-status'),
+    cm:v('f-cm'), srcm:v('f-srcm'), rm:v('f-rm'), srrm:v('f-srrm'), rvp:v('f-rvp'), svp:v('f-svp'),
+    forecastTarget:v('f-forecast-target'), firstDraftTarget:v('f-draft-target'),
+    rvpReturnTarget:v('f-rvp-return-target'), cmReturnTarget:v('f-cm-return-target'),
+    rmReviewTarget:v('f-rm-review-target'), finalTarget:v('f-final-target'),
+    forecastCompleted:v('f-forecast'), firstDraftActual:v('f-draft'),
+    rvpReturnActual:v('f-rvp-return'), cmReturnActual:v('f-cm-return'),
+    rmReviewActual:v('f-rm-review'), finalSentActual:v('f-final'),
+    clientApproved:v('f-approved'), approvalLetter:v('f-approval-letter'),
+    ticketOpened:v('f-ticket'), metPMA:pma, comments:v('f-comments'),
+  };
+  if(editId){const idx=allProperties.findIndex(x=>x.id===editId);if(idx>-1)allProperties[idx]=prop;}
+  else allProperties.push(prop);
+  saveData(allProperties); populateFilters(); filterTable();
+  closeModal('property-modal'); showToast(editId?'Property updated':'Property added','success');
+}
+function v(id){return document.getElementById(id)?.value?.trim()||'';}
+
+function openBulkEdit(){
+  if(!selectedIds.size)return;
+  document.getElementById('bulk-modal-sub').textContent=`Applying to ${selectedIds.size} properties`;
+  ['b-forecast-target','b-draft-target','b-rvp-return-target','b-cm-return-target','b-rm-review-target','b-final-target',
+   'b-forecast','b-draft','b-rvp-return','b-cm-return','b-rm-review','b-final','b-approved','b-approval-letter','b-ticket']
+    .forEach(id=>{document.getElementById(id).value='';});
+  openModal('bulk-modal');
+}
+function applyBulkEdit(){
+  const map={'b-forecast-target':'forecastTarget','b-draft-target':'firstDraftTarget','b-rvp-return-target':'rvpReturnTarget','b-cm-return-target':'cmReturnTarget','b-rm-review-target':'rmReviewTarget','b-final-target':'finalTarget','b-forecast':'forecastCompleted','b-draft':'firstDraftActual','b-rvp-return':'rvpReturnActual','b-cm-return':'cmReturnActual','b-rm-review':'rmReviewActual','b-final':'finalSentActual','b-approved':'clientApproved','b-approval-letter':'approvalLetter','b-ticket':'ticketOpened'};
+  const updates={};
+  Object.entries(map).forEach(([iid,f])=>{const val=document.getElementById(iid).value;if(val)updates[f]=val;});
+  if(!Object.keys(updates).length){showToast('No fields to update','error');return;}
+  let count=0;
+  allProperties.forEach(p=>{if(selectedIds.has(p.id)){Object.assign(p,updates);count++;}});
+  saveData(allProperties);filterTable();clearSelection();closeModal('bulk-modal');showToast(`Updated ${count} properties`,'success');
+}
+
+function switchView(view){
+  document.getElementById('properties-view').style.display=view==='properties'?'block':'none';
+  document.getElementById('report-view').style.display=view==='report'?'block':'none';
+  document.getElementById('nav-properties').classList.toggle('active',view==='properties');
+  document.getElementById('nav-report').classList.toggle('active',view==='report');
+  if(view==='report')renderReport();
+}
+
+function renderReport(){
+  const all=allProperties, total=all.length;
+  document.getElementById('report-date').textContent=`Generated ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+  const fc=all.filter(p=>p.forecastCompleted).length, draft=all.filter(p=>p.firstDraftActual).length;
+  const final=all.filter(p=>p.finalSentActual).length, approved=all.filter(p=>p.clientApproved).length;
+  const pmaMet=all.filter(p=>p.metPMA==='yes').length;
+  const pct=(n,d)=>d===0?0:Math.round(n/d*100);
+  document.getElementById('report-cards').innerHTML=[
+    ['Total Properties',total,'','blue',total,total],
+    ['Forecast Completed',fc,`${pct(fc,total)}% complete`,'green',fc,total],
+    ['First Draft to RVP',draft,`${pct(draft,total)}% complete`,'blue',draft,total],
+    ['Final Budget Sent',final,`${pct(final,total)}% complete`,'green',final,total],
+    ['Client Approved',approved,`${pct(approved,total)}% complete`,'yellow',approved,total],
+    ['Met PMA Deadline',pmaMet,`of all properties`,'green',pmaMet,total],
+  ].map(([label,val,sub,color,n,d])=>`<div class="report-card"><div class="report-card-label">${label}</div><div class="report-card-value ${color}">${val}</div>${sub?`<div class="report-card-sub">${sub}</div>`:''}<div class="progress-bar"><div class="progress-fill" style="width:${pct(n,d)}%"></div></div></div>`).join('');
+  const owners={};
+  all.forEach(p=>{const o=p.owner||'Unknown';if(!owners[o])owners[o]={total:0,complete:0};owners[o].total++;if(p.finalSentActual)owners[o].complete++;});
+  const rows=Object.entries(owners).sort((a,b)=>b[1].total-a[1].total).map(([name,d])=>`<tr><td style="padding:8px 12px;color:var(--text);">${esc(name)}</td><td style="padding:8px 12px;text-align:center;font-family:var(--mono);color:var(--text2);">${d.total}</td><td style="padding:8px 12px;text-align:center;font-family:var(--mono);color:var(--green);">${d.complete}</td><td style="padding:8px 12px;text-align:center;font-family:var(--mono);color:var(--text3);">${d.total-d.complete}</td><td style="padding:8px 12px;"><div class="progress-bar"><div class="progress-fill" style="width:${pct(d.complete,d.total)}%"></div></div></td></tr>`).join('');
+  document.getElementById('report-owner-breakdown').innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;"><div style="padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;">Owner Breakdown</div><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;color:var(--text3);font-size:11px;text-transform:uppercase;">Owner</th><th style="padding:8px 12px;text-align:center;color:var(--text3);font-size:11px;text-transform:uppercase;">Total</th><th style="padding:8px 12px;text-align:center;color:var(--text3);font-size:11px;text-transform:uppercase;">Complete</th><th style="padding:8px 12px;text-align:center;color:var(--text3);font-size:11px;text-transform:uppercase;">Remaining</th><th style="padding:8px 12px;color:var(--text3);font-size:11px;text-transform:uppercase;">Progress</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+
+function exportCSV(){
+  if(!allProperties.length){showToast('No data to export','error');return;}
+  const headers=['Property Name','Property Code','Primary Specialty','System','Status','PMA Effective Date','Property Owner','CM Name','Sr CM Name','RM Name','Sr RM Name','RVP Name','SVP Ops Name','Forecast Target','First Draft Target','RVP Return Target','CM Return Target','RM Review Target','Final to Client Target','Forecast Completed','First Draft Sent','RVP Returned','Returned to CM','RM Final Review','Final Budget Sent','Budget Approved','Approval Letter','Ticket Opened','Met PMA Deadline','Comments'];
+  const rows=allProperties.map(p=>[p.name,p.code,p.specialty,p.system,p.status,p.pmaDate,p.owner,p.cm,p.srcm,p.rm,p.srrm,p.rvp,p.svp,p.forecastTarget,p.firstDraftTarget,p.rvpReturnTarget,p.cmReturnTarget,p.rmReviewTarget,p.finalTarget,p.forecastCompleted,p.firstDraftActual,p.rvpReturnActual,p.cmReturnActual,p.rmReviewActual,p.finalSentActual,p.clientApproved,p.approvalLetter,p.ticketOpened,p.metPMA,p.comments].map(v=>`"${(v||'').replace(/"/g,'""')}"`));
+  const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`RPM_Budget_Tracker_2027_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(url);
+  showToast('CSV exported','success');
+}
+
+function processImport(){
+  const file=document.getElementById('import-file').files[0];
+  if(!file){showToast('Select a file first','error');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const lines=e.target.result.split('\n').filter(l=>l.trim());
+      const imported=lines.slice(1).map(line=>{
+        const vals=[];let cur='',inQ=false;
+        for(let i=0;i<line.length;i++){
+          if(line[i]==='"'&&!inQ)inQ=true;
+          else if(line[i]==='"'&&inQ&&line[i+1]==='"'){cur+='"';i++;}
+          else if(line[i]==='"'&&inQ)inQ=false;
+          else if(line[i]===','&&!inQ){vals.push(cur);cur='';}
+          else cur+=line[i];
+        }
+        vals.push(cur);
+        return{id:genId(),name:vals[0]||'',code:vals[1]||'',specialty:vals[2]||'',system:vals[3]||'',status:vals[4]||'',pmaDate:vals[5]||'',owner:vals[6]||'',cm:vals[7]||'',srcm:vals[8]||'',rm:vals[9]||'',srrm:vals[10]||'',rvp:vals[11]||'',svp:vals[12]||'',forecastTarget:vals[13]||'',firstDraftTarget:vals[14]||'',rvpReturnTarget:vals[15]||'',cmReturnTarget:vals[16]||'',rmReviewTarget:vals[17]||'',finalTarget:vals[18]||'',forecastCompleted:vals[19]||'',firstDraftActual:vals[20]||'',rvpReturnActual:vals[21]||'',cmReturnActual:vals[22]||'',rmReviewActual:vals[23]||'',finalSentActual:vals[24]||'',clientApproved:vals[25]||'',approvalLetter:vals[26]||'',ticketOpened:vals[27]||'',metPMA:vals[28]||'',comments:vals[29]||''};
+      }).filter(p=>p.name);
+      allProperties=imported;saveData(allProperties);populateFilters();filterTable();
+      closeModal('import-modal');showToast(`Imported ${imported.length} properties`,'success');
+    }catch(err){showToast('Import failed: '+err.message,'error');}
+  };
+  reader.readAsText(file);
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
+function showToast(msg,type='success'){const c=document.getElementById('toast-container');const t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=`<span>${type==='success'?'✓':'✕'}</span> ${msg}`;c.appendChild(t);setTimeout(()=>t.remove(),4000);}
+</script>
+</body>
+</html>
