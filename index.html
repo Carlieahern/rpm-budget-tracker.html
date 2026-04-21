@@ -44,13 +44,12 @@
   .header-right { display:flex; align-items:center; gap:10px; }
 
   /* YEAR SWITCHER */
-  .year-switcher { display:flex; align-items:center; gap:6px; margin-left:8px; }
-  .year-btn {
+.year-btn {
     padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700;
-    cursor:pointer; border:2px solid rgba(255,255,255,0.3); background:transparent;
-    color:rgba(255,255,255,0.6); font-family:var(--mono); transition:all 0.2s;
+    cursor:pointer; border:2px solid var(--copper); background:transparent;
+    color:var(--copper); font-family:var(--mono); transition:all 0.2s;
   }
-  .year-btn:hover { border-color:var(--copper); color:var(--copper); }
+  .year-btn:hover { background:rgba(184,115,51,0.1); }
   .year-btn.active { background:var(--copper); border-color:var(--copper); color:white; }
 
   /* YEAR SWITCH MODAL */
