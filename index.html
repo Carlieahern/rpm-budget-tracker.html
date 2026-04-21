@@ -228,7 +228,7 @@
       <div style="background:white;border:2px solid #dde0e8;border-radius:14px;padding:24px 20px;text-align:left;opacity:0.6;cursor:not-allowed;">
         <div style="font-size:24px;margin-bottom:10px;">📊</div>
         <div style="font-size:15px;font-weight:700;color:#3D4F4A;margin-bottom:4px;">Budget Assumptions</div>
-        <div style="font-size:12px;color:#8b92a8;line-height:1.5;">Manage and verify annual program cost assumptions by department.</div>
+        <div style="font-size:12px;color:#8b92a8;line-height:1.5;">Review and verify programs and billbacks built into the budget for each property.</div>
         <div style="margin-top:12px;display:inline-flex;align-items:center;gap:6px;background:#e4e6ec;color:#8b92a8;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;">Coming Soon</div>
       </div>
 
@@ -376,7 +376,7 @@
     <div class="modal-body">
       <!-- Password Gate -->
       <div id="settings-pw-gate">
-        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Enter today's access code to continue.<br><span style="font-size:11px;color:var(--text3);">Format: MMDDYY (e.g. today = 042126)</span></p>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Enter today's access code to continue.<br></p>
         <div class="form-group" style="margin-bottom:14px;">
           <label class="form-label">Access Code</label>
           <input type="password" class="form-input" id="settings-pw-input" placeholder="MMDDYY" maxlength="6" onkeydown="if(event.key==='Enter')checkSettingsPw()">
@@ -1351,7 +1351,7 @@ async function saveProperty(isComplete=false){
       await mondayQuery(`mutation {
         change_multiple_column_values(board_id:${BOARD_ID},item_id:${editId},column_values:${JSON.stringify(JSON.stringify(colVals))}) { id }
       }`);
-      await mondayQuery(`mutation { change_item_name(board_id:${BOARD_ID},item_id:${editId},value:${JSON.stringify(name)}) { id } }`);
+      await mondayQuery(`mutation { change_item_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(JSON.stringify(name))}) { id } }`);
       showToast('Property updated','success');
     } else {
       const newItem = await mondayQuery(`mutation {
@@ -1549,7 +1549,7 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
 function showLoading(t){
   const el=document.getElementById('loading-text');
-  el.textContent=t||'Loading...';
+  el.textContent=t||'Loading Leaders...';
   document.getElementById('loading').classList.add('visible');
   // Clear any existing timers
   if(window._loadTimer1) clearTimeout(window._loadTimer1);
@@ -1563,7 +1563,7 @@ function showLoading(t){
   // After 15s → Just a few more
   window._loadTimer2 = setTimeout(()=>{
     if(document.getElementById('loading').classList.contains('visible')){
-      el.textContent = 'Just a few more seconds...';
+      el.textContent = 'Be Patient. RPM has a lot of properties...';
     }
   }, 15000);
 }
