@@ -249,7 +249,7 @@ tr.selected td{background:rgba(184,115,51,.05);}
     </div>
     <div class="header-right">
       <span id="header-user" style="font-size:12px;color:var(--text2);"></span>
-      <button class="btn btn-secondary" onclick="openSettings()" title="Settings">⚙️</button>
+      <button class="btn btn-secondary" onclick="openSettings()" title="Settings" id="settings-btn" style="display:none;">⚙️</button>
 <button class="btn btn-secondary" onclick="goToHub()">⌂ Hub</button>
     </div>
   </div>
@@ -433,6 +433,8 @@ tr.selected td{background:rgba(184,115,51,.05);}
 <div class="loading-overlay" id="loading"><div class="spinner"></div><div style="color:var(--juniper);font-size:14px;font-weight:600;">Loading...</div></div>
 <div class="toast-container" id="toast-container"></div>
 <script>
+  const MONDAY_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzODMwNTU0NywiYWFpIjoxMSwidWlkIjozMDU1NzM0OCwiaWFkIjoiMjAyNi0wMy0yNlQxNzo0NDowMS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NzI1NTc5MCwicmduIjoidXNlMSJ9.KInntwsV13u5Wi0WpeBrksAUbQxZ57Ol15wX9dtlkIQ';
+const MONDAY_BOARD = '18409851670';
 const DUMMY=[
   {id:'1',name:'10X Woodway Square',code:'42802',owner:'Cardone Capital LLC',rvp:'Erica Askew',specialty:'Conventional',pmaDate:'Sep 22, 2021',budgetDue:'Mar 16, 2026',approvalStatus:'Approved',originalApprovalDate:'Mar 16, 2026',reopenHistory:[],approvalLetter:'Yes',burden:'32.00%',payrollDetail:'Some Detail',pmsSystem:'Yardi'},
   {id:'2',name:'12 South Magnolia',code:'68403',owner:'Oakpoint RE',rvp:'Thomas Wilkerson',specialty:'Conventional',pmaDate:'Jul 31, 2024',budgetDue:'Mar 31, 2026',approvalStatus:'Approved',originalApprovalDate:'Mar 28, 2026',reopenHistory:[],approvalLetter:'Yes',burden:'30.00%',payrollDetail:'Some Detail',pmsSystem:'Yardi'},
@@ -500,7 +502,7 @@ function launchApp(){
   allProperties=DUMMY.map(p=>({...p,reopenHistory:p.reopenHistory.map(r=>({...r}))}));
   document.getElementById('app').style.display='block';
   document.getElementById('header-user').textContent=currentUser.name+' · '+currentUser.position+(isAdmin?' (Admin)':'');
-  if(isAdmin)document.getElementById('admin-badge').style.display='inline-block';
+  if(isAdmin){   document.getElementById('admin-badge').style.display='inline-block';   document.getElementById('settings-btn').style.display='inline-flex'; }
   filterTable();updateStats();
 }
 
