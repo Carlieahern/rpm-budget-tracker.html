@@ -469,7 +469,7 @@ let activeTab='board';
 let pendingZendeskUrl='';
 let selectedIds=new Set();
 let S={};
-function resetS(preIds=[]){S={step:preIds.length?2:1,selectedIds:[...preIds],uploadedFile:null,uploadedFileURL:null,useClientCOA:null,coaName:'',glVerified:null,verifyEdits:{}};}
+function resetS(preIds=[]){S={step:1,selectedIds:[...preIds],uploadedFile:null,uploadedFileURL:null,useClientCOA:null,coaName:'',glVerified:null,verifyEdits:{}};}
 let RS={};
 function resetRS(propId){RS={propId,hasWrittenApproval:null,uploadedFile:null,understood:false};}
 
@@ -554,7 +554,7 @@ function renderTable(){
   if(!items.length){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--text3);">No properties found.</td></tr>`;renderPagination();return;}
   tbody.innerHTML=items.map(p=>{
     const sel=selectedIds.has(p.id);
-    const showSubmit=p.approvalStatus!=='Ticket Submitted';
+    const showSubmit=!['Ticket Submitted','Approved'].includes(p.approvalStatus);
     const showReopen=p.approvalStatus==='Approved';
     const hasReopen=p.reopenHistory&&p.reopenHistory.length>0;
     return `<tr class="${sel?'selected':''}">
@@ -648,7 +648,7 @@ function adminEditProp(propId,key,val){const p=allProperties.find(x=>x.id===prop
 
 // SUBMIT FLOW (4 steps: Upload → Verify → Questions → Open Ticket)
 const STEPS=['Upload','Verify','Questions','Open Ticket'];
-function openSubmitFlowFor(id){resetS([id]);renderSubmitStep();document.getElementById('submit-modal').classList.add('open');}
+function openSubmitFlowFor(id){resetS();S.selectedIds=[id];S.step=1;renderSubmitStep();document.getElementById('submit-modal').classList.add('open');}
 function progressHtml(current){
   let html='<div class="progress-steps" style="margin-bottom:20px;">';
   STEPS.forEach((lbl,i)=>{
