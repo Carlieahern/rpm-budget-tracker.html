@@ -1056,12 +1056,19 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('clic
       <button class="modal-close" onclick="closeModal('settings-modal')">×</button>
     </div>
     <div class="modal-body">
-      <div class="form-section">
-        <div class="form-section-title">Monday.com Connection</div>
-        <div class="form-group"><label class="form-label">API Token</label><input type="password" class="form-input" id="settings-token" placeholder="eyJhbGciOiJIUzI1NiJ9..." value=""></div>
-        <div class="form-group"><label class="form-label">Board ID</label><input type="text" class="form-input" id="settings-board" value="18409851670"></div>
-        <div id="settings-status" style="font-size:12px;color:var(--text3);margin-top:8px;"></div>
-      </div>
+  <div class="form-section">
+    <div class="form-section-title">Monday.com Connection</div>
+    <div class="form-group"><label class="form-label">API Token</label><input type="password" class="form-input" id="settings-token" placeholder="eyJhbGciOiJIUzI1NiJ9..." value=""></div>
+    <div class="form-group"><label class="form-label">Board ID</label><input type="text" class="form-input" id="settings-board" value="18409851670"></div>
+    <div id="settings-status" style="font-size:12px;color:var(--text3);margin-top:8px;"></div>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">Data</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Manually pull the latest data from Monday at any time.</p>
+    <button class="btn btn-secondary" onclick="syncMonday();closeModal('settings-modal')">🔄 Sync Now</button>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;">Auto-syncs every 5 minutes while the app is open.</div>
+  </div>
+</div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Cancel</button>
