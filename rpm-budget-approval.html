@@ -249,7 +249,8 @@ tr.selected td{background:rgba(184,115,51,.05);}
     </div>
     <div class="header-right">
       <span id="header-user" style="font-size:12px;color:var(--text2);"></span>
-      <button class="btn btn-secondary" onclick="goToHub()">⌂ Hub</button>
+      <button class="btn btn-secondary" onclick="goToHub()">⌂ Hub</button><button class="btn btn-secondary" onclick="openSettings()" title="Settings">⚙️</button>
+<button class="btn btn-secondary" onclick="goToHub()">⌂ Hub</button>
     </div>
   </div>
 
@@ -1022,7 +1023,22 @@ function exportQueue(){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`RPM_Queue_${new Date().toISOString().split('T')[0]}.csv`;a.click();
   toast('Queue exported','success');
 }
+function openSettings(){
+  const saved=localStorage.getItem('rpm_monday_token');
+  if(saved)document.getElementById('settings-token').value=saved;
+  document.getElementById('settings-modal').classList.add('open');
+}
 
+function saveSettings(){
+  const token=document.getElementById('settings-token').value.trim();
+  const board=document.getElementById('settings-board').value.trim();
+  if(!token){toast('Please enter your API token','error');return;}
+  localStorage.setItem('rpm_monday_token',token);
+  localStorage.setItem('rpm_monday_board',board);
+  document.getElementById('settings-status').textContent='✓ Saved — Monday connection ready';
+  document.getElementById('settings-status').style.color='var(--green)';
+  toast('Settings saved','success');
+}
 // MISC
 function switchYear(y){currentYear=y;[2026,2027,2028].forEach(yr=>{const btn=document.getElementById('btn-'+yr);if(btn)btn.classList.toggle('active',yr===y);});document.getElementById('report-title').textContent=y+' Approval Status Report';filterTable();}
 function goToHub(){window.location.href='index.html';}
@@ -1031,5 +1047,25 @@ function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;
 function toast(msg,type='success'){const c=document.getElementById('toast-container');const t=document.createElement('div');t.className=`toast ${type==='error'?'error':type==='warning'?'warning':''}`;t.innerHTML=`<span>${type==='success'?'✓':'⚠'}</span> ${msg}`;c.appendChild(t);setTimeout(()=>t.remove(),4000);}
 document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
 </script>
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div><div class="modal-title">⚙️ Settings</div><div class="modal-subtitle">Connect to Monday.com</div></div>
+      <button class="modal-close" onclick="closeModal('settings-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-section-title">Monday.com Connection</div>
+        <div class="form-group"><label class="form-label">API Token</label><input type="password" class="form-input" id="settings-token" placeholder="eyJhbGciOiJIUzI1NiJ9..." value=""></div>
+        <div class="form-group"><label class="form-label">Board ID</label><input type="text" class="form-input" id="settings-board" value="18409851670"></div>
+        <div id="settings-status" style="font-size:12px;color:var(--text3);margin-top:8px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Cancel</button>
+      <button class="btn btn-copper" onclick="saveSettings()">Save & Connect</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
