@@ -471,7 +471,7 @@ let selectedIds=new Set();
 let S={};
 function resetS(preIds=[]){S={step:1,selectedIds:[...preIds],uploadedFile:null,uploadedFileURL:null,useClientCOA:null,coaName:'',glVerified:null,verifyEdits:{}};}
 let RS={};
-function resetRS(propId){RS={propId,hasWrittenApproval:null,uploadedFile:null,understood:false};}
+function resetRS(propId){RS={propId,hasWrittenApproval:null,uploadedFile:null,understood:false,reopenReason:undefined};}
 
 // GATE
 function submitGate(){
@@ -777,9 +777,23 @@ function renderReopenStep(){
         <label class="radio-opt" onclick="RS.hasWrittenApproval=false;renderReopenStep()"><input type="radio" name="rwa" value="no"><div><div class="radio-opt-label">No — I do not have written approval yet</div></div></label>
       </div></div>`;
     footer.innerHTML=`<button class="btn btn-secondary" onclick="closeModal('reopen-modal')">Cancel</button>`;
-  } else if(RS.hasWrittenApproval===false){
-    body.innerHTML=`<div class="info-box danger">You must obtain written approval from the client before reopening a budget.</div>`;
-    footer.innerHTML=`<button class="btn btn-secondary" onclick="closeModal('reopen-modal')">Close</button>`;
+  } else if(RS.hasWrittenApproval===false && RS.reopenReason===undefined){
+  body.innerHTML=`<div class="form-section"><div class="form-section-title">Reason for Reopening</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">What is the reason for reopening this budget?</p>
+    <div class="radio-group">
+      <label class="radio-opt" onclick="RS.reopenReason='expenses';renderReopenStep()"><input type="radio" name="reason" value="expenses"><div><div class="radio-opt-label">I am adding expenses or income that were not previously budgeted</div></div></label>
+      <label class="radio-opt" onclick="RS.reopenReason='relocating';renderReopenStep()"><input type="radio" name="reason" value="relocating"><div><div class="radio-opt-label">I am relocating income or expenses within the budget and the approved cashflow will not change</div></div></label>
+    </div></div>`;
+  footer.innerHTML=`<button class="btn btn-secondary" onclick="RS.hasWrittenApproval=null;renderReopenStep()">← Back</button>`;
+} else if(RS.hasWrittenApproval===false && RS.reopenReason==='expenses'){
+  body.innerHTML=`<div class="info-box danger">You must obtain written approval from the client before reopening this budget. Please come back once you have that in hand.</div>`;
+  footer.innerHTML=`<button class="btn btn-secondary" onclick="RS.reopenReason=undefined;renderReopenStep()">← Back</button><button class="btn btn-secondary" onclick="closeModal('reopen-modal')">Close</button>`;
+} else if(RS.hasWrittenApproval===false && RS.reopenReason==='relocating'){
+  body.innerHTML=`<div class="info-box success" style="margin-bottom:14px;">✓ No written approval required. Ready to submit reopen ticket.</div>
+    <div class="verify-row"><span class="verify-label">Property</span><span class="verify-value">${esc(p.name)}</span></div>
+    <div class="verify-row"><span class="verify-label">Original Approval</span><span class="verify-value">${esc(p.originalApprovalDate)||'—'}</span></div>
+    <div class="verify-row"><span class="verify-label">Reason</span><span class="verify-value">Relocating income/expenses — cashflow unchanged</span></div>`;
+  footer.innerHTML=`<button class="btn btn-secondary" onclick="RS.reopenReason=undefined;renderReopenStep()">← Back</button><button class="btn btn-danger" onclick="submitReopen()">🔄 Submit Reopen Ticket →</button>`;
   } else if(!RS.uploadedFile){
     body.innerHTML=`<div class="form-section"><div class="form-section-title">Upload Written Approval</div>
       <div class="upload-zone" onclick="triggerReopenUpload()"><div class="upload-icon">📄</div><div class="upload-text">Upload written client approval</div><div class="upload-sub">PDF, Word, or image</div></div>
