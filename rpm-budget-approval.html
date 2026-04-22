@@ -627,11 +627,43 @@ function openDetailModal(id){
       <div class="verify-row"><span class="verify-label">Type</span><span class="verify-value">${t.isReopen?'<span style="color:var(--red);">Reopen</span>':'New Submission'}</span></div>
       <div class="verify-row"><span class="verify-label">Approval Sign Off</span><span class="verify-value">${t.uploadedFile?`<a href="#" style="color:var(--copper);">📎 ${esc(t.uploadedFile)}</a>`:'—'}</span></div>
     </div>`).join('')}</div>`:'';
+
+  // Calculated fields
+  const reopenCount=p.reopenHistory.length;
+  const lastReopen=reopenCount>0?p.reopenHistory[reopenCount-1].reopenDate:'—';
+  const mostRecentApproval=reopenCount>0?(p.reopenHistory[reopenCount-1].newApprovalDate||'Pending'):p.originalApprovalDate||'—';
+
+  // All approval files — original + all reopen uploads
+  const allFiles=[];
+  if(p.approvalLetter==='Yes'&&tickets.length>0){
+    const orig=tickets.find(t=>!t.isReopen);
+    if(orig&&orig.uploadedFile)allFiles.push({file:orig.uploadedFile,date:p.originalApprovalDate,label:'Original'});
+  }
+  p.reopenHistory.forEach((r,i)=>{
+    if(r.uploadedFile)allFiles.push({file:r.uploadedFile,date:r.newApprovalDate||r.reopenDate,label:`Reopen #${i+1}`});
+  });
+  const filesHtml=allFiles.length?allFiles.map(f=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+    <span style="font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px;color:var(--text3);">${f.label}</span>
+    <a href="#" style="color:var(--copper);font-size:12px;" onclick="return false;">📎 ${esc(f.file)}</a>
+    <span style="font-size:11px;color:var(--text3);margin-left:auto;">${f.date||'—'}</span>
+  </div>`).join(''):'<span style="font-size:12px;color:var(--text3);">No files uploaded yet</span>';
+
   const adminEditHtml=isAdmin?`<div class="form-section"><div class="form-section-title">Admin — Edit Property Info</div>
-    ${[['name','Property Name',p.name],['code','Code',p.code],['owner','Owner',p.owner],['rvp','RVP',p.rvp],['burden','Burden %',p.burden],['payrollDetail','Payroll Detail',p.payrollDetail]].map(([key,label,val])=>`<div class="verify-row">
+    ${[['name','Property Name',p.name],['code','Code',p.code],['owner','Owner',p.owner],['rvp','RVP',p.rvp],['burden','Burden %',p.burden],['payrollDetail','Payroll Detail',p.payrollDetail],['budgetingId','Budgeting ID',p.budgetingId||''],['occVacEntryDate','Occ/Vac Entry Date',p.occVacEntryDate||''],['state','State',p.state||'']].map(([key,label,val])=>`<div class="verify-row">
       <span class="verify-label">${label}</span>
-      <input class="verify-edit-input" value="${esc(val||'')}" onchange="adminEditProp('${id}','${key}',this.value)">
-    </div>`).join('')}</div>`:'';
+      <input class="verify-edit-input" value="${esc(val)}" onchange="adminEditProp('${id}','${key}',this.value)">
+    </div>`).join('')}
+    <div class="verify-row">
+      <span class="verify-label">Budget Approval Imports</span>
+      <div style="flex:1;">
+        <div style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:6px;">${filesHtml}</div>
+      </div>
+    </div>
+    <div class="verify-row"><span class="verify-label" style="color:var(--text3);">Most Recent Approval</span><span class="verify-value" style="color:var(--text2);">${mostRecentApproval}</span><span style="font-size:10px;color:var(--text3);">auto</span></div>
+    <div class="verify-row"><span class="verify-label" style="color:var(--text3);"># of Reopens</span><span class="verify-value" style="color:var(--text2);">${reopenCount}</span><span style="font-size:10px;color:var(--text3);">auto</span></div>
+    <div class="verify-row"><span class="verify-label" style="color:var(--text3);">Last Reopen Date</span><span class="verify-value" style="color:var(--text2);">${lastReopen}</span><span style="font-size:10px;color:var(--text3);">auto</span></div>
+  </div>`:'';
+
   document.getElementById('detail-modal-body').innerHTML=`
     <div class="form-section"><div class="form-section-title">Property Info</div>
       <div class="verify-row"><span class="verify-label">Status</span><span class="verify-value">${statusBadge(p.approvalStatus)}</span></div>
@@ -639,9 +671,16 @@ function openDetailModal(id){
       <div class="verify-row"><span class="verify-label">PMA Date</span><span class="verify-value">${esc(p.pmaDate)||'—'}</span></div>
       <div class="verify-row"><span class="verify-label">PMA Deadline</span><span class="verify-value">${esc(p.budgetDue)||'—'}</span></div>
       <div class="verify-row"><span class="verify-label">Original Approval</span><span class="verify-value">${esc(p.originalApprovalDate)||'—'}</span></div>
+      <div class="verify-row"><span class="verify-label">Most Recent Approval</span><span class="verify-value">${mostRecentApproval}</span></div>
       <div class="verify-row"><span class="verify-label">Burden %</span><span class="verify-value">${esc(p.burden)||'—'}</span></div>
       <div class="verify-row"><span class="verify-label">Payroll Detail</span><span class="verify-value">${esc(p.payrollDetail)||'—'}</span></div>
-    </div>${historyHtml}${ticketsHtml}${adminEditHtml}`;
+      <div class="verify-row"><span class="verify-label">State</span><span class="verify-value">${esc(p.state)||'—'}</span></div>
+      <div class="verify-row"><span class="verify-label">Budgeting ID</span><span class="verify-value">${esc(p.budgetingId)||'—'}</span></div>
+      <div class="verify-row"><span class="verify-label">Occ/Vac Entry Date</span><span class="verify-value">${esc(p.occVacEntryDate)||'—'}</span></div>
+      <div class="verify-row"><span class="verify-label"># of Reopens</span><span class="verify-value">${reopenCount}</span></div>
+      <div class="verify-row"><span class="verify-label">Last Reopen Date</span><span class="verify-value">${lastReopen}</span></div>
+    </div>
+    ${historyHtml}${ticketsHtml}${adminEditHtml}`;
   document.getElementById('detail-modal').classList.add('open');
 }
 function adminEditProp(propId,key,val){const p=allProperties.find(x=>x.id===propId);if(p){p[key]=val;toast('Updated','success');}}
