@@ -502,16 +502,22 @@
 
 <!-- BULK MODAL -->
 <div class="modal-overlay" id="bulk-modal">
-  <div class="modal" style="max-width:500px;">
+  <div class="modal" style="max-width:600px;">
     <div class="modal-header modal-header-accent">
       <div><div class="modal-title">Bulk Edit Dates</div><div class="modal-subtitle" id="bulk-modal-sub"></div></div>
       <button class="modal-close" onclick="closeModal('bulk-modal')">×</button>
     </div>
     <div class="modal-body">
-      <p style="color:var(--text2);font-size:13px;margin-bottom:16px;">Only filled fields will be updated. Blank fields are ignored.</p>
 
+      <!-- PER PROPERTY SECTION -->
       <div class="form-section">
-        <div class="form-section-title">Budget Due Date Timeline</div>
+        <div class="form-section-title">Budget Due to Client per PMA (Per Property)</div>
+        <div id="bulk-per-property" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px;">Only filled fields below will be updated. Blank fields are ignored.</p>
+      <div class="form-section">
+        <div class="form-section-title">Budget Due Date Timeline (Apply to All Selected)</div>
         <div class="form-grid">
           <div class="form-group"><label class="form-label">Forecast Completed <span class="info-icon">i<span class="tooltip-text">This should be completed prior to Regional Budget Workshop</span></span></label><input type="date" class="form-input" id="b-forecast"></div>
           <div class="form-group"><label class="form-label">First Draft to RM</label><input type="date" class="form-input" id="b-draft-rm"></div>
@@ -520,9 +526,9 @@
           <div class="form-group"><label class="form-label">Returned to CM <span class="info-icon">i<span class="tooltip-text">Regional Manager to review the request and review this with the Community Manager to make final edits</span></span></label><input type="date" class="form-input" id="b-cm-return"></div>
           <div class="form-group"><label class="form-label">RM Final Review</label><input type="date" class="form-input" id="b-rm-review"></div>
           <div class="form-group"><label class="form-label">Final Budget Sent</label><input type="date" class="form-input" id="b-final"></div>
-          <div class="form-group"><label class="form-label">Client Approved</label><input type="date" class="form-input" id="b-approved"></div>
-          <div class="form-group"><label class="form-label">Approval Letter</label><input type="date" class="form-input" id="b-approval-letter"></div>
-          <div class="form-group"><label class="form-label">Ticket Opened</label><input type="date" class="form-input" id="b-ticket"></div>
+          <div class="form-group"><label class="form-label">Client Approved</label><input type="date" class="form-input" id="b-approved" oninput="recalcAllBulkPMA()"></div>
+          <div class="form-group"><label class="form-label">Written Approval Received</label><input type="date" class="form-input" id="b-approval-letter"></div>
+          <div class="form-group"><label class="form-label">Ticket Opened with Budget Support</label><input type="date" class="form-input" id="b-ticket"></div>
         </div>
       </div>
     </div>
@@ -537,6 +543,9 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script>
+  function recalcAllBulkPMA(){
+  [...selectedIds].forEach(id => calcBulkPMA(id));
+}
 // ============================================================
 // CONFIG
 // ============================================================
@@ -1363,15 +1372,56 @@ async function saveProperty(isComplete=false){
 // ============================================================
 
   function openBulkEdit(){
-  if(!selectedIds.size)return;
-  document.getElementById('bulk-modal-sub').textContent=`Applying to ${selectedIds.size} properties`;
+  if(!selectedIds.size) return;
+  document.getElementById('bulk-modal-sub').textContent = `Applying to ${selectedIds.size} properties`;
+
+  // Clear bulk fields
   ['b-forecast-target','b-draft-target','b-rvp-return-target','b-cm-return-target','b-rm-review-target','b-final-target',
- 'b-forecast','b-draft-rm','b-draft','b-rvp-return','b-cm-return','b-rm-review','b-final','b-approved','b-approval-letter','b-ticket']
-  .forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.value='';
+   'b-forecast','b-draft-rm','b-draft','b-rvp-return','b-cm-return','b-rm-review','b-final','b-approved','b-approval-letter','b-ticket']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+
+  // Build per-property rows
+  const container = document.getElementById('bulk-per-property');
+  container.innerHTML = '';
+  [...selectedIds].forEach(id => {
+    const p = allProperties.find(x => x.id === id);
+    if(!p) return;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 160px 100px;gap:10px;align-items:center;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;';
+    row.innerHTML = `
+      <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(p.name)}">${esc(p.name)}</div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Budget Due per PMA</div>
+        <input type="date" class="form-input" style="font-size:12px;padding:5px 8px;" 
+          data-prop-id="${id}" 
+          value="${p.budgetDue || ''}"
+          oninput="calcBulkPMA('${id}')">
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Met PMA</div>
+        <div id="bulk-pma-${id}" style="font-size:13px;font-weight:600;color:var(--text3);">—</div>
+      </div>
+    `;
+    container.appendChild(row);
   });
+
   openModal('bulk-modal');
+}
+
+function calcBulkPMA(propId){
+  const p = allProperties.find(x => x.id === propId);
+  if(!p) return;
+  const budgetDueEl = document.querySelector(`input[data-prop-id="${propId}"]`);
+  const display = document.getElementById('bulk-pma-' + propId);
+  if(!budgetDueEl || !display) return;
+  const budgetDue = budgetDueEl.value;
+  // Use the bulk "Client Approved" field if filled, otherwise fall back to property's existing value
+  const bulkApproved = document.getElementById('b-approved')?.value;
+  const approved = bulkApproved || p.clientApproved || '';
+  if(!approved || !budgetDue){ display.textContent='—'; display.style.color='var(--text3)'; return; }
+  const met = approved <= budgetDue;
+  display.textContent = met ? '✓ Yes' : '✗ No';
+  display.style.color = met ? 'var(--green)' : 'var(--red)';
 }
 
 async function applyBulkEdit(){
@@ -1414,7 +1464,31 @@ async function applyBulkEdit(){
   await loadItems();
   showToast('Updated ' + success + ' properties' + (failed>0?', '+failed+' failed':''), success>0?'success':'error');
 }
-
+// Save per-property budget due dates
+for(const id of ids){
+  const budgetDueEl = document.querySelector(`input[data-prop-id="${id}"]`);
+  if(!budgetDueEl || !budgetDueEl.value) continue;
+  const budgetDue = budgetDueEl.value;
+  const p = allProperties.find(x => x.id === id);
+  // Recalc met PMA using bulk approved date or existing
+  const bulkApproved = document.getElementById('b-approved')?.value;
+  const approved = bulkApproved || p?.clientApproved || '';
+  const metPMA = approved ? (approved <= budgetDue ? 'Yes' : 'No') : '';
+  const perPropUpdates = {};
+  if(COL.budgetDue) perPropUpdates[COL.budgetDue] = budgetDue;
+  if(COL.metPMA && metPMA) perPropUpdates[COL.metPMA] = metPMA;
+  if(Object.keys(perPropUpdates).length){
+    try{
+      await mondayQuery(`mutation {
+        change_multiple_column_values(
+          board_id:${BOARD_ID},
+          item_id:${id},
+          column_values:${JSON.stringify(JSON.stringify(perPropUpdates))}
+        ) { id }
+      }`);
+    } catch(e){ console.log('Per-property save failed for', id, e.message); }
+  }
+}
 // ============================================================
 // REPORT
 // ============================================================
