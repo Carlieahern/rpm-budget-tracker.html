@@ -952,13 +952,7 @@ async function runBackfill() {
 
       if (Object.keys(updates).length === 0) { skipped++; continue; }
 
-      const result = await mondayQuery(`mutation {
-        change_multiple_column_values(
-          board_id: ${BOARD_ID},
-          item_id: ${item26.id},
-          column_values: ${JSON.stringify(JSON.stringify(updates))}
-        ) { id }
-      }`);
+      const result = await mondayQuery(`mutation { change_simple_column_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(name)}) { id } }`);
       console.log('Updated item', item26.id, item26.name, updates);
       updated++;
     }
@@ -999,13 +993,7 @@ async function runBackfill() {
         const srcDate = match26.budgetDue;
         const yearIncremented = srcDate.replace(/^(\d{4})/, (y) => String(parseInt(y) + 1));
         pmaUpdate[COL.budgetDue] = {date: yearIncremented};
-        await mondayQuery(`mutation {
-          change_multiple_column_values(
-            board_id: ${BOARD_ID},
-            item_id: ${item27.id},
-            column_values: ${JSON.stringify(JSON.stringify(pmaUpdate))}
-          ) { id }
-        }`);
+        await mondayQuery(`mutation { change_simple_column_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(name)}) { id } }`);
         console.log('PMA date synced to 2027 item', item27.name, match26.budgetDue);
         pmaUpdated++;
       }
@@ -1406,7 +1394,7 @@ async function applyBulkEdit(){
   let success=0,failed=0;
   for(const id of ids){
     try{
-      await mondayQuery(`mutation { change_multiple_column_values(board_id:${BOARD_ID},item_id:${id},column_values:${JSON.stringify(JSON.stringify(updates))}) { id } }`);
+      await mondayQuery(`mutation { change_simple_column_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(name)}) { id } }`);
       success++;
     } catch{failed++;}
   }
