@@ -1257,6 +1257,8 @@ function openAddModal(){
   document.getElementById('edit-id').value='';
   updateRequiredIndicators();
   openModal('property-modal');
+  const dupMsg = document.getElementById('duplicate-code-msg');
+if(dupMsg) dupMsg.style.display = 'none';
 }
 
 async function openEditModal(id){
