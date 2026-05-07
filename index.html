@@ -1456,6 +1456,15 @@ async function applyBulkEdit(){
           column_values:${JSON.stringify(JSON.stringify(updates))}
         ) { id }
       }`);
+      if(COL.completionStatus && updates[COL.ticketOpened]){
+        await mondayQuery(`mutation {
+          change_multiple_column_values(
+            board_id:${BOARD_ID},
+            item_id:${id},
+            column_values:${JSON.stringify(JSON.stringify({[COL.completionStatus]:{label:'Complete'}}))}
+          ) { id }
+        }`);
+      }
       success++;
     } catch{ failed++; }
   }
