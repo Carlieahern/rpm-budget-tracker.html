@@ -1393,11 +1393,17 @@ async function applyBulkEdit(){
   const ids=[...selectedIds];
   let success=0,failed=0;
   for(const id of ids){
-    try{
-      await mondayQuery(`mutation { change_simple_column_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(name)}) { id } }`);
-      success++;
-    } catch{failed++;}
-  }
+  try{
+    await mondayQuery(`mutation {
+      change_multiple_column_values(
+        board_id:${BOARD_ID},
+        item_id:${id},
+        column_values:${JSON.stringify(JSON.stringify(updates))}
+      ) { id }
+    }`);
+    success++;
+  } catch{ failed++; }
+}
   clearSelection();
   await loadItems();
   showToast('Updated ' + success + ' properties' + (failed>0?', '+failed+' failed':''), success>0?'success':'error');
