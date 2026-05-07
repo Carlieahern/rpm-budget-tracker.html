@@ -543,9 +543,7 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-  function recalcAllBulkPMA(){
-  [...selectedIds].forEach(id => calcBulkPMA(id));
-}
+
 // ============================================================
 // CONFIG
 // ============================================================
@@ -1406,6 +1404,9 @@ async function saveProperty(isComplete=false){
   });
 
   openModal('bulk-modal');
+}
+function recalcAllBulkPMA(){
+  [...selectedIds].forEach(id => calcBulkPMA(id));
 }
 
 function calcBulkPMA(propId){
