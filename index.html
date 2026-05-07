@@ -1251,6 +1251,7 @@ function updateBulkBar(){const n=selectedIds.size;document.getElementById('bulk-
 // ADD / EDIT / SAVE
 // ============================================================
 function openAddModal(){
+  document.getElementById('duplicate-code-msg').style.display = 'none'; // ADD THIS
   clearForm();
   document.getElementById('modal-title').textContent='Add Property (' + currentYear + ')';
   document.getElementById('modal-subtitle').textContent='';
@@ -1262,6 +1263,7 @@ if(dupMsg) dupMsg.style.display = 'none';
 }
 
 async function openEditModal(id){
+  document.getElementById('duplicate-code-msg').style.display = 'none'; // ADD THIS
   const p=allProperties.find(x=>x.id===id);if(!p)return;
   clearForm();
   // Set Completion Status to In Progress (index 2) as soon as Edit is clicked
