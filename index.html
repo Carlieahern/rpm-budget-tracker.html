@@ -1342,7 +1342,7 @@ async function saveProperty(isComplete=false){
       await mondayQuery(`mutation {
         change_multiple_column_values(board_id:${BOARD_ID},item_id:${editId},column_values:${JSON.stringify(JSON.stringify(colVals))}) { id }
       }`);
-      await mondayQuery(`mutation { change_simple_column_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(JSON.stringify(name))}) { id } }`);
+      await mondayQuery(`mutation { change_simple_column_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(name)}) { id } }`);
       showToast('Property updated','success');
     } else {
       const newItem = await mondayQuery(`mutation {
