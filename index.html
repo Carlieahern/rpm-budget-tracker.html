@@ -446,7 +446,11 @@
         <div class="form-section-title">Property Information</div>
         <div class="form-grid">
           <div class="form-group"><label class="form-label">Property Name <span class="req">*</span></label><input type="text" class="form-input" id="f-name"></div>
-          <div class="form-group"><label class="form-label">Property Code <span class="req" id="req-code">*</span></label><input type="text" class="form-input" id="f-code"></div>
+          <div class="form-group">
+  <label class="form-label">Property Code <span class="req" id="req-code">*</span></label>
+  <input type="text" class="form-input" id="f-code" oninput="checkDuplicateCode()">
+  <div id="duplicate-code-msg" style="display:none;margin-top:6px;padding:8px 12px;background:#fff8e7;border:1px solid var(--copper);border-radius:8px;font-size:12px;color:var(--juniper);"></div>
+</div>
           <div class="form-group"><label class="form-label">Property Owner <span class="req" id="req-owner">*</span></label><input type="text" class="form-input" id="f-owner"></div>
           <div class="form-group"><label class="form-label">PMA Effective Date <span class="req" id="req-pma">*</span></label><input type="date" class="form-input" id="f-pma"></div>
           <div class="form-group"><label class="form-label">Primary Specialty <span class="req" id="req-specialty">*</span></label><select class="form-select" id="f-specialty"><option value="">Select...</option><option>Conventional</option><option>Affordable</option><option>Commercial</option></select></div>
@@ -543,7 +547,24 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script>
+function checkDuplicateCode(){
+  const code = document.getElementById('f-code').value.trim().toLowerCase();
+  const msg = document.getElementById('duplicate-code-msg');
+  const editingId = document.getElementById('edit-id').value;
 
+  if(!code){ msg.style.display='none'; return; }
+
+  const match = allProperties.find(p =>
+    p.code && p.code.toLowerCase() === code && p.id !== editingId
+  );
+
+  if(match){
+    msg.style.display = 'block';
+    msg.innerHTML = `⚠️ We found another property with that code: <strong>${esc(match.name)}</strong>. <a href="#" style="color:var(--copper);font-weight:600;text-decoration:underline;" onclick="closeModal('property-modal');openEditModal('${match.id}');return false;">View & Edit →</a>`;
+  } else {
+    msg.style.display = 'none';
+  }
+}
 // ============================================================
 // CONFIG
 // ============================================================
