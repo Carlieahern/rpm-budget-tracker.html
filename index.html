@@ -1366,8 +1366,11 @@ async function saveProperty(isComplete=false){
   if(!selectedIds.size)return;
   document.getElementById('bulk-modal-sub').textContent=`Applying to ${selectedIds.size} properties`;
   ['b-forecast-target','b-draft-target','b-rvp-return-target','b-cm-return-target','b-rm-review-target','b-final-target',
-   'b-forecast','b-draft-rm','b-draft','b-rvp-return','b-cm-return','b-rm-review','b-final','b-approved','b-approval-letter','b-ticket']
-    .forEach(id=>{document.getElementById(id).value='';});
+ 'b-forecast','b-draft-rm','b-draft','b-rvp-return','b-cm-return','b-rm-review','b-final','b-approved','b-approval-letter','b-ticket']
+  .forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value='';
+  });
   openModal('bulk-modal');
 }
 
