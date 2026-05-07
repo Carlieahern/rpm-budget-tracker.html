@@ -588,12 +588,13 @@ async function launchTracker() {
     }`);
     const board = data.boards[0];
     if (!board) throw new Error('Board not found.');
-    board.groups.forEach(g => {
-      const t = g.title.trim();
-      if (t === '2026') siteGroupIds[2026] = g.id;
-      if (t === '2027') siteGroupIds[2027] = g.id;
-      if (t === '2028') siteGroupIds[2028] = g.id;
-    });
+   board.groups.forEach(g => {
+  const t = g.title.trim();
+  if (t === '2026') siteGroupIds[2026] = g.id;
+  if (t === '2027') siteGroupIds[2027] = g.id;
+  if (t === '2028') siteGroupIds[2028] = g.id;
+  if (t === 'Dispo') siteGroupIds['dispo'] = g.id;
+});
     board.columns.forEach(col => {
       const t = col.title.toLowerCase().trim();
       if (t === 'name') COL.name = col.id;
@@ -1184,7 +1185,10 @@ function renderTable() {
       <td><span class="cell-date ${!p.finalSentActual?'empty':''}">${fmtDateDisplay(p.finalSentActual)}</span></td>
       <td>${pmaBadge(p.metPMA)}</td>
       <td style="text-align:center;">${p.ticketOpened ? '<span style="color:#0f9e72;font-size:18px;" title="Ticket opened with Budget Support">✓</span>' : '<span style="color:#dde0e8;font-size:16px;">○</span>'}</td>
-      <td><button class="btn-edit-row" onclick="openEditModal('${p.id}')">✏️ Edit</button></td>
+      <td style="display:flex;gap:6px;">
+  <button class="btn-edit-row" onclick="openEditModal('${p.id}')">✏️ Edit</button>
+  <button class="btn-edit-row" style="background:#d63b3b;box-shadow:0 1px 4px rgba(214,59,59,0.3);" onclick="dispoProperty('${p.id}','${esc(p.name)}')">Dispo</button>
+</td>
     </tr>`;
   }).join('');
   renderPagination();
@@ -1363,7 +1367,24 @@ async function saveProperty(isComplete=false){
     showToast('Save failed: '+err.message,'error');
   }
 }
-
+async function dispoProperty(id, name){
+  if(!siteGroupIds['dispo']){
+    showToast('Dispo group not found in Monday board', 'error');
+    return;
+  }
+  if(!confirm(`Are you sure you want to dispo "${name}"?\n\nThis will move the property to the Dispo group in Monday.`)) return;
+  showLoading('Moving to Dispo...');
+  try{
+    await mondayQuery(`mutation {
+      move_item_to_group(item_id:${id}, group_id:"${siteGroupIds['dispo']}") { id }
+    }`);
+    showToast(`${name} moved to Dispo`, 'success');
+    await loadItems();
+  } catch(e){
+    hideLoading();
+    showToast('Dispo failed: ' + e.message, 'error');
+  }
+}
 // ============================================================
 // BULK EDIT
 // ============================================================
