@@ -1382,11 +1382,13 @@ async function applyBulkEdit(){
     'b-approval-letter':{colId:COL.approvalLetter,isDate:true},'b-ticket':{colId:COL.ticketOpened,isDate:true},
   };
   const updates={};
-  Object.entries(map).forEach(([inputId,{colId,isDate}])=>{
-    if(!colId)return;
-    const val=document.getElementById(inputId).value;
-    if(val) updates[colId]=isDate?{date:val}:val;
-  });
+ Object.entries(map).forEach(([inputId,{colId,isDate}])=>{
+  if(!colId) return;
+  const el = document.getElementById(inputId);
+  if(!el) return;  // ADD THIS
+  const val = el.value.trim();  // ADD .trim()
+  if(val) updates[colId] = isDate ? {date:val} : val;
+});
   if(!Object.keys(updates).length){showToast('No fields to update','error');return;}
   closeModal('bulk-modal');
   showLoading(`Updating ${selectedIds.size} properties...`);
