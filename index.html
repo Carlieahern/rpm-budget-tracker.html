@@ -1372,7 +1372,7 @@ async function dispoProperty(id, name){
     showToast('Dispo group not found in Monday board', 'error');
     return;
   }
-  if(!confirm(`Are you sure you want to dispo "${name}"?\n\nThis will move the property to the Dispo group in Monday.`)) return;
+  if(!confirm(`Are you sure you want to dispo "${name}"?`)) return;
   showLoading('Moving to Dispo...');
   try{
     await mondayQuery(`mutation {
