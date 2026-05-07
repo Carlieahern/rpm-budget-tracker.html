@@ -1362,6 +1362,9 @@ async function saveProperty(isComplete=false){
 // BULK EDIT
 // ============================================================
 function openBulkEdit(){
+  alert('openBulkEdit called, selected: ' + selectedIds.size); // ADD THIS
+  if(!selectedIds.size)return;
+  function openBulkEdit(){
   if(!selectedIds.size)return;
   document.getElementById('bulk-modal-sub').textContent=`Applying to ${selectedIds.size} properties`;
   ['b-forecast-target','b-draft-target','b-rvp-return-target','b-cm-return-target','b-rm-review-target','b-final-target',
