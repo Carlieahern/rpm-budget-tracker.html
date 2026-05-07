@@ -580,7 +580,6 @@ window.addEventListener('DOMContentLoaded', () => {
 async function launchTracker() {
   showLoading('Connecting to Monday...');
   try {
-    // Connect silently
     const data = await mondayQuery(`{
       boards(ids: ${BOARD_ID}) {
         groups { id title }
