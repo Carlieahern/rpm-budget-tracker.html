@@ -837,12 +837,17 @@ async function initActivityBoard(){
 
 async function initActivitySession(){
   try{
-    await initActivityBoard();
-    if(!activityGroupId)return;
-    const now=new Date();
-    const sessionName=`${currentUser.name} — ${now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
-    const result=await mondayQuery(`mutation{create_item(board_id:${ACTIVITY_BOARD},group_id:"${activityGroupId}",item_name:${JSON.stringify(sessionName)}){id}}`);
-    activitySessionItemId=result.create_item.id;
+    activityGroupId='group_mm34wb6x';
+    const today=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const qResult=await mondayQuery(`{boards(ids:${ACTIVITY_BOARD}){groups(ids:"${activityGroupId}"){items_page(limit:100){items{id name}}}}}`);
+    const items=qResult.boards[0].groups[0].items_page.items;
+    const existing=items.find(it=>it.name===today);
+    if(existing){
+      activitySessionItemId=existing.id;
+    } else {
+      const mResult=await mondayQuery(`mutation{create_item(board_id:${ACTIVITY_BOARD},group_id:"${activityGroupId}",item_name:${JSON.stringify(today)}){id}}`);
+      activitySessionItemId=mResult.create_item.id;
+    }
     await logActivity('Login');
   }catch(e){console.warn('Activity session init failed',e);}
 }
@@ -851,7 +856,8 @@ async function logActivity(action,details={}){
   try{
     if(!activitySessionItemId)return;
     const now=new Date();
-    const ts=now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    const ts=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const subitemName=`${currentUser.name||'Unknown'} — ${action}${details.property?' — '+details.property:''}`;
     const colValues={
       [ACTIVITY_COLS.time]:ts,
       [ACTIVITY_COLS.department]:currentUser.position||'',
@@ -859,7 +865,7 @@ async function logActivity(action,details={}){
       [ACTIVITY_COLS.actionType]:action,
       [ACTIVITY_COLS.details]:details.property||'-'
     };
-    await mondayQuery(`mutation{create_subitem(parent_item_id:${activitySessionItemId},item_name:${JSON.stringify(currentUser.name||'Unknown')},column_values:${JSON.stringify(JSON.stringify(colValues))}){id}}`);
+    await mondayQuery(`mutation{create_subitem(parent_item_id:${activitySessionItemId},item_name:${JSON.stringify(subitemName)},column_values:${JSON.stringify(JSON.stringify(colValues))}){id}}`);
   }catch(e){console.warn('logActivity failed',e);}
 }
 
