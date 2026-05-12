@@ -206,6 +206,26 @@
   #btn-complete.ready:hover { background:#9e6229 !important; }
   ::-webkit-scrollbar{width:6px;height:6px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
   @media(max-width:768px){.stats-bar{grid-template-columns:repeat(2,1fr);}.form-grid,.form-grid.cols3{grid-template-columns:1fr;}.report-grid{grid-template-columns:1fr;}.sidebar{display:none;}.year-switcher{gap:4px;}}
+
+  /* TRACKER LOGIN */
+  #tracker-login{display:none;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:460px;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
+  .login-card h1{font-size:20px;font-weight:600;text-align:center;margin-bottom:6px;color:var(--juniper);}
+  .login-sub{color:var(--text2);font-size:13px;text-align:center;margin-bottom:28px;line-height:1.6;}
+  .login-label{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:0.5px;}
+  .login-label .req{color:var(--red);margin-left:2px;}
+  .login-input,.login-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color 0.2s;}
+  .login-input:focus,.login-select:focus{border-color:var(--copper);}
+  .login-btn{width:100%;padding:12px;background:var(--juniper);color:white;border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;}
+  .login-btn:hover{opacity:0.9;}
+  /* ADMIN LOGIN MODAL */
+  #admin-login-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3000;align-items:center;justify-content:center;}
+  #admin-login-modal.open{display:flex;}
+  .admin-login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.18);}
+  .admin-login-card h2{font-size:17px;font-weight:600;color:var(--juniper);margin-bottom:6px;text-align:center;}
+  .admin-login-sub{font-size:12px;color:var(--text2);text-align:center;margin-bottom:24px;line-height:1.6;}
+  .admin-passcode-input{width:100%;background:var(--surface2);border:2px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-family:var(--mono);font-size:22px;text-align:center;letter-spacing:8px;outline:none;}
+  .admin-passcode-input:focus{border-color:var(--copper);}
 </style>
 </head>
 <body>
@@ -257,6 +277,52 @@
       </div>
 
     </div>
+  </div>
+</div>
+
+<!-- HUB LOGIN -->
+<div id="hub-login">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="width:52px;height:52px;background:var(--juniper);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;">🏠</div>
+    </div>
+    <h1>RPM Budget Hub</h1>
+    <p class="login-sub">Enter your information to get started.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div><label class="login-label">First Name <span class="req">*</span></label><input type="text" class="login-input" id="login-first" placeholder="Jane"></div>
+      <div><label class="login-label">Last Name <span class="req">*</span></label><input type="text" class="login-input" id="login-last" placeholder="Smith"></div>
+    </div>
+    <div style="margin-bottom:14px;"><label class="login-label">Email Address <span class="req">*</span></label><input type="email" class="login-input" id="login-email" placeholder="jane.smith@rpmliving.com"></div>
+    <div style="margin-bottom:6px;"><label class="login-label">Role <span class="req">*</span></label>
+      <select class="login-select" id="login-role">
+        <option value="">Select your role...</option>
+        <option>Community Manager</option>
+        <option>Senior Community Manager</option>
+        <option>Regional Manager</option>
+        <option>Senior Regional Manager</option>
+        <option>Regional Vice President</option>
+        <option>SVP Operations</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <button class="login-btn" onclick="submitHubLogin()">Continue →</button>
+    <div style="text-align:center;margin-top:18px;">
+      <button onclick="showAdminLoginModal()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--font);text-decoration:underline;text-underline-offset:2px;">Admin Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div id="admin-login-modal">
+  <div class="admin-login-card">
+    <div style="text-align:center;font-size:32px;margin-bottom:12px;">🔐</div>
+    <h2>Admin Login</h2>
+    <p class="admin-login-sub">Enter your name and today's passcode to access with admin privileges.</p>
+    <div style="margin-bottom:14px;"><label class="login-label">First Name <span class="req">*</span></label><input type="text" class="login-input" id="admin-name" placeholder="Jane" onkeydown="if(event.key==='Enter')document.getElementById('admin-passcode').focus()"></div>
+    <div style="margin-bottom:6px;"><label class="login-label">Passcode <span class="req">*</span></label><input type="password" class="admin-passcode-input" id="admin-passcode" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter')verifyAdminLogin()"></div>
+    <div id="admin-login-err" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none;">Incorrect passcode. Try again.</div>
+    <button class="login-btn" onclick="verifyAdminLogin()">Verify →</button>
+    <div style="text-align:center;margin-top:12px;"><button onclick="closeAdminLoginModal()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--font);">Cancel</button></div>
   </div>
 </div>
 
@@ -569,6 +635,7 @@ function checkDuplicateCode(){
 // CONFIG
 // ============================================================
 const BOARD_ID = '9029568429';
+const ACTIVITY_BOARD = '18407376110';
 const HARDCODED_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzODMwNTU0NywiYWFpIjoxMSwidWlkIjozMDU1NzM0OCwiaWFkIjoiMjAyNi0wMy0yNlQxNzo0NDowMS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NzI1NTc5MCwicmduIjoidXNlMSJ9.KInntwsV13u5Wi0WpeBrksAUbQxZ57Ol15wX9dtlkIQ';
 const TOKEN_KEY = 'rpm_monday_token';
 const YEARS = [2026, 2027, 2028];
@@ -589,14 +656,62 @@ let sortField = 'name', sortAsc = true, activeQuickFilter = 'all';
 let currentYear = 2027;
 let pendingYear = null;
 let siteGroupIds = {}; // { 2026: groupId, 2027: groupId, 2028: groupId }
+let currentUser = {firstName:'', lastName:'', name:'', email:'', position:'', isAdmin:false};
+let isAdmin = false;
+let activityGroupId = null;
+let activitySessionItemId = null;
 
 // ============================================================
 // INIT
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('setup-screen').style.display = 'flex';
+  document.getElementById('hub-login').style.display = 'flex';
+  document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app').style.display = 'none';
 });
+
+function submitHubLogin() {
+  const firstName = document.getElementById('login-first').value.trim();
+  const lastName = document.getElementById('login-last').value.trim();
+  const email = document.getElementById('login-email').value.trim();
+  const role = document.getElementById('login-role').value;
+  if (!firstName || !lastName || !email || !role) { showToast('Please fill in all fields', 'error'); return; }
+  if (!email.includes('@')) { showToast('Please enter a valid email', 'error'); return; }
+  currentUser = {firstName, lastName, name: firstName + ' ' + lastName, email, position: role, isAdmin: false};
+  isAdmin = false;
+  document.getElementById('hub-login').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'flex';
+}
+
+function showAdminLoginModal() {
+  document.getElementById('admin-name').value = '';
+  document.getElementById('admin-passcode').value = '';
+  document.getElementById('admin-login-err').style.display = 'none';
+  document.getElementById('admin-login-modal').classList.add('open');
+  setTimeout(() => document.getElementById('admin-name').focus(), 50);
+}
+
+function closeAdminLoginModal() {
+  document.getElementById('admin-login-modal').classList.remove('open');
+}
+
+function verifyAdminLogin() {
+  const name = document.getElementById('admin-name').value.trim();
+  const passcode = document.getElementById('admin-passcode').value.trim();
+  const err = document.getElementById('admin-login-err');
+  if (!name) { showToast('Please enter your name', 'error'); return; }
+  if (passcode !== getTodayCode()) {
+    err.style.display = 'block';
+    document.getElementById('admin-passcode').value = '';
+    return;
+  }
+  err.style.display = 'none';
+  currentUser = {firstName: name, lastName: '', name, email: '', position: 'Budget Admin', isAdmin: true};
+  isAdmin = true;
+  closeAdminLoginModal();
+  document.getElementById('hub-login').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'flex';
+}
 
 async function launchTracker() {
   showLoading('Connecting to Monday...');
@@ -651,6 +766,7 @@ async function launchTracker() {
     document.getElementById('app').style.display = 'block';
     updateYearButtons();
     await loadItems();
+    initActivitySession();
   } catch(e) {
     hideLoading();
     showToast('Connection failed: ' + e.message, 'error');
@@ -661,6 +777,48 @@ async function launchTracker() {
 // ============================================================
 // MONDAY API
 // ============================================================
+const ACTIVITY_COLS = {
+  time:        'text_mm25vhjm',
+  username:    'text_mm25nn6r',
+  department:  'text_mm25pj7p',
+  email:       'text_mm25zszm',
+  actionType:  'text_mm2544gd',
+  programName: 'text_mm25ks77',
+  details:     'text_mm25je0x'
+};
+
+async function initActivityBoard(){
+  activityGroupId='group_mm34wb6x'; // Budget Due Date Tracker Activity
+}
+
+async function initActivitySession(){
+  try{
+    await initActivityBoard();
+    if(!activityGroupId)return;
+    const now=new Date();
+    const sessionName=`${currentUser.name} — ${now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+    const result=await mondayQuery(`mutation{create_item(board_id:${ACTIVITY_BOARD},group_id:"${activityGroupId}",item_name:${JSON.stringify(sessionName)}){id}}`);
+    activitySessionItemId=result.create_item.id;
+    await logActivity('Login');
+  }catch(e){console.warn('Activity session init failed',e);}
+}
+
+async function logActivity(action,details={}){
+  try{
+    if(!activitySessionItemId)return;
+    const now=new Date();
+    const ts=now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    const colValues={
+      [ACTIVITY_COLS.time]:ts,
+      [ACTIVITY_COLS.department]:currentUser.position||'',
+      [ACTIVITY_COLS.email]:currentUser.email||'',
+      [ACTIVITY_COLS.actionType]:action,
+      [ACTIVITY_COLS.details]:details.property||'-'
+    };
+    await mondayQuery(`mutation{create_subitem(parent_item_id:${activitySessionItemId},item_name:${JSON.stringify(currentUser.name||'Unknown')},column_values:${JSON.stringify(JSON.stringify(colValues))}){id}}`);
+  }catch(e){console.warn('logActivity failed',e);}
+}
+
 async function mondayQuery(query) {
   const res = await fetch('https://api.monday.com/v2', {
     method: 'POST',
@@ -1379,11 +1537,13 @@ async function saveProperty(isComplete=false){
       }`);
       await mondayQuery(`mutation { change_simple_column_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(name)}) { id } }`);
       showToast('Property updated','success');
+      logActivity('Property Updated',{property:name});
     } else {
       const newItem = await mondayQuery(`mutation {
         create_item(board_id:${BOARD_ID},group_id:"${groupId}",item_name:${JSON.stringify(name)},column_values:${JSON.stringify(JSON.stringify(colVals))}) { id }
       }`);
       showToast('Property added','success');
+      logActivity('Property Added',{property:name});
     }
     closeModal('property-modal');
     await loadItems();
@@ -1404,6 +1564,7 @@ async function dispoProperty(id, name){
       move_item_to_group(item_id:${id}, group_id:"${siteGroupIds['dispo']}") { id }
     }`);
     showToast(`${name} moved to Dispo`, 'success');
+    logActivity('Property Dispo\'d',{property:name});
     await loadItems();
   } catch(e){
     hideLoading();
