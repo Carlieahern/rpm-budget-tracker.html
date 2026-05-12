@@ -257,7 +257,7 @@
   <div style="font-size:15px;font-weight:700;color:#3D4F4A;margin-bottom:4px;">Budget Approval Status Board</div>
   <div style="font-size:12px;color:#8b92a8;line-height:1.5;">Monitor client approval status and signed letter receipts.</div>
   <div style="margin-top:12px;">
-    <a id="approval-admin-link" href="rpm-budget-approval.html" style="display:none;align-items:center;gap:6px;background:#B87333;color:white;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;text-decoration:none;">Open →</a>
+    <a id="approval-admin-link" href="../Budget Status/rpm-budget-approval.html" style="display:none;align-items:center;gap:6px;background:#B87333;color:white;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;text-decoration:none;">Open →</a>
   </div>
 </div>
 
@@ -678,7 +678,7 @@ function submitHubLogin() {
   if (!email.includes('@')) { showToast('Please enter a valid email', 'error'); return; }
   currentUser = {firstName, lastName, name: firstName + ' ' + lastName, email, position: role, isAdmin: false};
   isAdmin = false;
-  sessionStorage.setItem('rpm_hub_user', JSON.stringify(currentUser));
+  localStorage.setItem('rpm_hub_user', JSON.stringify(currentUser));
   document.getElementById('hub-login').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'flex';
   document.getElementById('approval-admin-link').style.display = 'none';
@@ -709,7 +709,7 @@ function verifyAdminLogin() {
   err.style.display = 'none';
   currentUser = {firstName: name, lastName: '', name, email: '', position: 'Budget Admin', isAdmin: true};
   isAdmin = true;
-  sessionStorage.setItem('rpm_hub_user', JSON.stringify(currentUser));
+  localStorage.setItem('rpm_hub_user', JSON.stringify(currentUser));
   closeAdminLoginModal();
   document.getElementById('hub-login').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'flex';
