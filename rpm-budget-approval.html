@@ -86,7 +86,7 @@ tr.selected td{background:rgba(184,115,51,.05);}
 .page-btn:hover{border-color:var(--copper);color:var(--copper);}
 .page-btn.active{background:var(--copper);border-color:var(--copper);color:#fff;}
 .page-btn:disabled{opacity:.3;cursor:not-allowed;}
-#user-gate{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);}
+#user-gate{display:none;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);}
 .gate-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:440px;box-shadow:0 4px 24px rgba(0,0,0,.08);}
 .gate-logo{height:48px;width:auto;display:block;margin:0 auto 20px;}
 .gate-card h1{font-size:20px;font-weight:600;text-align:center;margin-bottom:6px;color:var(--juniper);}
@@ -1235,17 +1235,18 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('clic
 // Auto-login from Hub session
 window.addEventListener('DOMContentLoaded',()=>{
   const saved=localStorage.getItem('rpm_hub_user');
-  if(!saved)return;
+  if(!saved){
+    document.getElementById('user-gate').style.display='flex';
+    return;
+  }
   localStorage.removeItem('rpm_hub_user'); // clear immediately — one-time use
   try{
     const u=JSON.parse(saved);
-    if(!u.name)return;
+    if(!u.name){document.getElementById('user-gate').style.display='flex';return;}
     currentUser={firstName:u.firstName||'',lastName:u.lastName||'',name:u.name,email:u.email||'',position:u.position||''};
     if(u.isAdmin){isAdmin=true;}
-    document.getElementById('user-gate').style.display='none';
-    document.getElementById('passcode-screen').style.display='none';
     launchApp();
-  }catch(e){}
+  }catch(e){document.getElementById('user-gate').style.display='flex';}
 });
 </script>
 </body>
