@@ -664,6 +664,22 @@ let activitySessionItemId = null;
 // INIT
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
+  const returning = localStorage.getItem('rpm_hub_return');
+  if (returning) {
+    localStorage.removeItem('rpm_hub_return');
+    try {
+      const u = JSON.parse(returning);
+      if (u.name) {
+        currentUser = {firstName: u.firstName||'', lastName: u.lastName||'', name: u.name, email: u.email||'', position: u.position||'', isAdmin: !!u.isAdmin};
+        isAdmin = !!u.isAdmin;
+        document.getElementById('hub-login').style.display = 'none';
+        document.getElementById('setup-screen').style.display = 'flex';
+        document.getElementById('app').style.display = 'none';
+        if (isAdmin) document.getElementById('approval-admin-link').style.display = 'inline';
+        return;
+      }
+    } catch(e) {}
+  }
   document.getElementById('hub-login').style.display = 'flex';
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app').style.display = 'none';
