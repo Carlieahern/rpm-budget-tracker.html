@@ -545,8 +545,8 @@
           <div class="form-group"><label class="form-label">RVP Returned to RM <span class="info-icon">i<span class="tooltip-text">RVP to complete initial review and return with requested revisions</span></span></label><input type="date" class="form-input" id="f-rvp-return"></div>
           <div class="form-group"><label class="form-label">Returned to CM <span class="info-icon">i<span class="tooltip-text">Regional Manager to review the request and review this with the Community Manager to make final edits</span></span></label><input type="date" class="form-input" id="f-cm-return"></div>
           <div class="form-group"><label class="form-label">RM Final Review Done <span class="info-icon">i<span class="tooltip-text">Deadline for final budget draft to be completed prior to sending to the client. This should align with the Budget Due Date to Client per PMA</span></span></label><input type="date" class="form-input" id="f-rm-review"></div>
-          <div class="form-group"><label class="form-label">Final Budget Sent to Client</label><input type="date" class="form-input" id="f-final"></div>
-          <div class="form-group"><label class="form-label">Budget Approved by Client</label><input type="date" class="form-input" id="f-approved" oninput="calcMetPMA()"></div>
+          <div class="form-group"><label class="form-label">Final Budget Sent to Client</label><input type="date" class="form-input" id="f-final" oninput="calcMetPMA()"></div>
+          <div class="form-group"><label class="form-label">Budget Approved by Client</label><input type="date" class="form-input" id="f-approved"></div>
           <div class="form-group"><label class="form-label">Signed Approval Letter Received</label><input type="date" class="form-input" id="f-approval-letter"></div>
           <div class="form-group"><label class="form-label">Ticket Opened with Budget Support <span class="info-icon">i<span class="tooltip-text">Please include the signed approval form or approval email when submitting the support request.</span></span></label><input type="date" class="form-input" id="f-ticket"></div>
           <div class="form-group">
@@ -594,8 +594,8 @@
           <div class="form-group"><label class="form-label">RVP Returned</label><input type="date" class="form-input" id="b-rvp-return"></div>
           <div class="form-group"><label class="form-label">Returned to CM <span class="info-icon">i<span class="tooltip-text">Regional Manager to review the request and review this with the Community Manager to make final edits</span></span></label><input type="date" class="form-input" id="b-cm-return"></div>
           <div class="form-group"><label class="form-label">RM Final Review</label><input type="date" class="form-input" id="b-rm-review"></div>
-          <div class="form-group"><label class="form-label">Final Budget Sent</label><input type="date" class="form-input" id="b-final"></div>
-          <div class="form-group"><label class="form-label">Client Approved</label><input type="date" class="form-input" id="b-approved" oninput="recalcAllBulkPMA()"></div>
+          <div class="form-group"><label class="form-label">Final Budget Sent</label><input type="date" class="form-input" id="b-final" oninput="recalcAllBulkPMA()"></div>
+          <div class="form-group"><label class="form-label">Client Approved</label><input type="date" class="form-input" id="b-approved"></div>
           <div class="form-group"><label class="form-label">Written Approval Received</label><input type="date" class="form-input" id="b-approval-letter"></div>
           <div class="form-group"><label class="form-label">Ticket Opened with Budget Support</label><input type="date" class="form-input" id="b-ticket"></div>
         </div>
@@ -1478,7 +1478,7 @@ function clearForm(){
 }
 
 function calcMetPMA(){
-  const approvedVal=document.getElementById('f-approved')?.value?.trim();
+  const approvedVal=document.getElementById('f-final')?.value?.trim();
   const budgetDueVal=document.getElementById('f-budget-due')?.value?.trim();
   const display=document.getElementById('f-pma-display');
   const hidden=document.getElementById('f-pma-val');
@@ -1624,10 +1624,10 @@ function calcBulkPMA(propId){
   const display = document.getElementById('bulk-pma-' + propId);
   if(!budgetDueEl || !display) return;
   const budgetDue = budgetDueEl.value;
-  const bulkApproved = document.getElementById('b-approved')?.value;
-  const approved = bulkApproved || p.clientApproved || '';
-  if(!approved || !budgetDue){ display.textContent='—'; display.style.color='var(--text3)'; return; }
-  const met = approved <= budgetDue;
+  const bulkFinal = document.getElementById('b-final')?.value;
+  const finalSent = bulkFinal || p.finalSentActual || '';
+  if(!finalSent || !budgetDue){ display.textContent='—'; display.style.color='var(--text3)'; return; }
+  const met = finalSent <= budgetDue;
   display.textContent = met ? '✓ Yes' : '✗ No';
   display.style.color = met ? 'var(--green)' : 'var(--red)';
 }
@@ -1685,9 +1685,9 @@ async function applyBulkEdit(){
     if(!budgetDueEl || !budgetDueEl.value) continue;
     const budgetDue = budgetDueEl.value;
     const p = allProperties.find(x => x.id === id);
-    const bulkApproved = document.getElementById('b-approved')?.value;
-    const approved = bulkApproved || p?.clientApproved || '';
-    const metPMA = approved ? (approved <= budgetDue ? 'Yes' : 'No') : '';
+    const bulkFinal = document.getElementById('b-final')?.value;
+    const finalSent = bulkFinal || p?.finalSentActual || '';
+    const metPMA = finalSent ? (finalSent <= budgetDue ? 'Yes' : 'No') : '';
     const perPropUpdates = {};
     if(COL.budgetDue) perPropUpdates[COL.budgetDue] = budgetDue;
     if(COL.metPMA && metPMA) perPropUpdates[COL.metPMA] = metPMA;
