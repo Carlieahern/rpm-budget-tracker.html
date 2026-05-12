@@ -440,7 +440,7 @@ tr.selected td{background:rgba(184,115,51,.05);}
 
 <script>
 // ── MONDAY CONFIG ──
-const MONDAY_BOARD = '18409851670';
+let MONDAY_BOARD = localStorage.getItem('rpm_monday_board') || '18409851670';
 const ACTIVITY_BOARD = '18407376110';
 const ACTIVITY_COLS = {
   time:        'text_mm25vhjm',
@@ -451,7 +451,8 @@ const ACTIVITY_COLS = {
   programName: 'text_mm25ks77',
   details:     'text_mm25je0x'
 };
-let MONDAY_TOKEN = '';
+const HARDCODED_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzODMwNTU0NywiYWFpIjoxMSwidWlkIjozMDU1NzM0OCwiaWFkIjoiMjAyNi0wMy0yNlQxNzo0NDowMS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NzI1NTc5MCwicmduIjoidXNlMSJ9.KInntwsV13u5Wi0WpeBrksAUbQxZ57Ol15wX9dtlkIQ';
+let MONDAY_TOKEN = HARDCODED_TOKEN;
 let activityGroupId = null;
 let activitySessionItemId = null;
 
@@ -646,27 +647,34 @@ function launchApp(){
     document.getElementById('settings-btn').style.display='inline-flex';
   }
   initActivitySession();
-  // Load saved token
+  // Use hardcoded token; allow override from localStorage if manually set
   const saved=localStorage.getItem('rpm_monday_token');
   if(saved)MONDAY_TOKEN=saved;
+  else MONDAY_TOKEN=HARDCODED_TOKEN;
   syncMonday();
   setInterval(syncMonday,2*60*1000);
 }
 
 // ── SETTINGS ──
 function openSettings(){
-  const saved=localStorage.getItem('rpm_monday_token');
-  if(saved)document.getElementById('settings-token').value=saved;
+  const savedToken=localStorage.getItem('rpm_monday_token');
+  if(savedToken)document.getElementById('settings-token').value=savedToken;
+  document.getElementById('settings-board').value=MONDAY_BOARD;
   document.getElementById('settings-modal').classList.add('open');
 }
 function saveSettings(){
   const token=document.getElementById('settings-token').value.trim();
+  const board=document.getElementById('settings-board').value.trim();
   if(!token){toast('Please enter your API token','error');return;}
+  if(!board){toast('Please enter the Board ID','error');return;}
   MONDAY_TOKEN=token;
+  MONDAY_BOARD=board;
   localStorage.setItem('rpm_monday_token',token);
-  document.getElementById('settings-status').textContent='✓ Saved';
+  localStorage.setItem('rpm_monday_board',board);
+  document.getElementById('settings-status').textContent='✓ Saved — syncing...';
   document.getElementById('settings-status').style.color='var(--green)';
-  toast('Settings saved','success');
+  closeModal('settings-modal');
+  syncMonday();
 }
 
 // ── TABS ──
