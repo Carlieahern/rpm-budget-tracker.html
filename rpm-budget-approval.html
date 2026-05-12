@@ -1226,7 +1226,10 @@ function exportQueue(){
 
 // ── MISC ──
 function switchYear(y){currentYear=y;[2026,2027,2028].forEach(yr=>{const btn=document.getElementById('btn-'+yr);if(btn)btn.classList.toggle('active',yr===y);});filterTable();}
-function goToHub(){window.location.href='index.html';}
+function goToHub(){
+  localStorage.setItem('rpm_hub_return', JSON.stringify({name:currentUser.name,firstName:currentUser.firstName,lastName:currentUser.lastName,email:currentUser.email,position:currentUser.position,isAdmin}));
+  window.location.href='index.html';
+}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type='success'){const c=document.getElementById('toast-container');const t=document.createElement('div');t.className=`toast ${type==='error'?'error':type==='warning'?'warning':''}`;t.innerHTML=`<span>${type==='success'?'✓':'⚠'}</span> ${msg}`;c.appendChild(t);setTimeout(()=>t.remove(),4000);}
