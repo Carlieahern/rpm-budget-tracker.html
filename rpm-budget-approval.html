@@ -442,9 +442,18 @@ tr.selected td{background:rgba(184,115,51,.05);}
 // ── MONDAY CONFIG ──
 const MONDAY_BOARD = '18409851670';
 const ACTIVITY_BOARD = '18407376110';
+const ACTIVITY_COLS = {
+  time:        'text_mm25vhjm',
+  username:    'text_mm25nn6r',
+  department:  'text_mm25pj7p',
+  email:       'text_mm25zszm',
+  actionType:  'text_mm2544gd',
+  programName: 'text_mm25ks77',
+  details:     'text_mm25je0x'
+};
 let MONDAY_TOKEN = '';
 let activityGroupId = null;
-let activityColumns = null;
+let activitySessionItemId = null;
 
 // ── COLUMN MAP ──
 const COL = {
@@ -572,34 +581,37 @@ async function pushStatusToMonday(itemId, columnId, label){
 }
 
 // ── ACTIVITY LOG ──
-async function initActivityBoard(){
-  activityGroupId='group_mm39z216'; // Budget Status Tracker
+async function initActivitySession(){
+  try{
+    activityGroupId='group_mm39z216';
+    const today=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const qResult=await mondayQuery(`{boards(ids:${ACTIVITY_BOARD}){groups(ids:"${activityGroupId}"){items_page(limit:100){items{id name}}}}}`);
+    const items=qResult.boards[0].groups[0].items_page.items;
+    const existing=items.find(it=>it.name===today);
+    if(existing){
+      activitySessionItemId=existing.id;
+    } else {
+      const mResult=await mondayQuery(`mutation{create_item(board_id:${ACTIVITY_BOARD},group_id:"${activityGroupId}",item_name:${JSON.stringify(today)}){id}}`);
+      activitySessionItemId=mResult.create_item.id;
+    }
+    await logActivity('Login');
+  }catch(e){console.warn('Activity session init failed',e);}
 }
 
 async function logActivity(action,details={}){
-  const token=MONDAY_TOKEN||localStorage.getItem('rpm_monday_token')||'';
-  if(!token)return;
-  await initActivityBoard();
-  if(!activityGroupId)return;
-  const now=new Date();
-  const ts=now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  const itemName=`${action} — ${currentUser.name} — ${ts}`;
-  const colValues={};
-  if(activityColumns&&activityColumns.length){
-    const find=(kw)=>activityColumns.find(c=>c.title.toLowerCase().includes(kw)&&c.type!=='name');
-    const nameCol=find('name')||find('user');
-    const emailCol=find('email');
-    const roleCol=find('role')||find('position');
-    const actionCol=find('action')||find('activity')||find('type');
-    const detailCol=find('detail')||find('note')||find('property');
-    if(nameCol)colValues[nameCol.id]=currentUser.name;
-    if(emailCol)colValues[emailCol.id]=currentUser.email;
-    if(roleCol)colValues[roleCol.id]=currentUser.position;
-    if(actionCol)colValues[actionCol.id]=action;
-    if(detailCol&&details.property)colValues[detailCol.id]=details.property;
-  }
-  const colStr=Object.keys(colValues).length?`,column_values:${JSON.stringify(JSON.stringify(colValues))}`:'';
-  await mondayMutation(`mutation{create_item(board_id:${ACTIVITY_BOARD},group_id:"${activityGroupId}",item_name:${JSON.stringify(itemName)}${colStr}){id}}`);
+  try{
+    if(!activitySessionItemId)return;
+    const ts=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const subitemName=`${currentUser.name||'Unknown'} — ${action}${details.property?' — '+details.property:''}`;
+    const colValues={
+      [ACTIVITY_COLS.time]:ts,
+      [ACTIVITY_COLS.department]:currentUser.position||'',
+      [ACTIVITY_COLS.email]:currentUser.email||'',
+      [ACTIVITY_COLS.actionType]:action,
+      [ACTIVITY_COLS.details]:details.property||'-'
+    };
+    await mondayQuery(`mutation{create_subitem(parent_item_id:${activitySessionItemId},item_name:${JSON.stringify(subitemName)},column_values:${JSON.stringify(JSON.stringify(colValues))}){id}}`);
+  }catch(e){console.warn('logActivity failed',e);}
 }
 
 // ── GATE ──
@@ -633,7 +645,7 @@ function launchApp(){
     document.getElementById('admin-badge').style.display='inline-block';
     document.getElementById('settings-btn').style.display='inline-flex';
   }
-  logActivity('Login');
+  initActivitySession();
   // Load saved token
   const saved=localStorage.getItem('rpm_monday_token');
   if(saved)MONDAY_TOKEN=saved;
