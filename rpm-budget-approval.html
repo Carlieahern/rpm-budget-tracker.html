@@ -444,6 +444,14 @@ tr.selected td{background:rgba(184,115,51,.05);}
 <div class="toast-container" id="toast-container"></div>
 
 <script>
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  MONDAY API TOKEN — update this if sync ever stops working      ║
+// ║  1. Go to Monday → Profile → Admin → API                       ║
+// ║  2. Copy your Personal API Token                                ║
+// ║  3. Replace the value below and save the file to GitHub         ║
+// ╚══════════════════════════════════════════════════════════════════╝
+const MONDAY_API_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzODMwNTU0NywiYWFpIjoxMSwidWlkIjozMDU1NzM0OCwiaWFkIjoiMjAyNi0wMy0yNlQxNzo0NDowMS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NzI1NTc5MCwicmduIjoidXNlMSJ9.KInntwsV13u5Wi0WpeBrksAUbQxZ57Ol15wX9dtlkIQ';
+
 // ── MONDAY CONFIG ──
 const CONFIG_BOARD = '18413190457';
 const ACTIVITY_BOARD = '18407376110';
@@ -459,8 +467,8 @@ const ACTIVITY_COLS = {
   programName: 'text_mm25ks77',
   details:     'text_mm25je0x'
 };
-const HARDCODED_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzODMwNTU0NywiYWFpIjoxMSwidWlkIjozMDU1NzM0OCwiaWFkIjoiMjAyNi0wMy0yNlQxNzo0NDowMS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NzI1NTc5MCwicmduIjoidXNlMSJ9.KInntwsV13u5Wi0WpeBrksAUbQxZ57Ol15wX9dtlkIQ';
-let MONDAY_TOKEN = HARDCODED_TOKEN;
+const MONDAY_API_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzODMwNTU0NywiYWFpIjoxMSwidWlkIjozMDU1NzM0OCwiaWFkIjoiMjAyNi0wMy0yNlQxNzo0NDowMS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NzI1NTc5MCwicmduIjoidXNlMSJ9.KInntwsV13u5Wi0WpeBrksAUbQxZ57Ol15wX9dtlkIQ';
+let MONDAY_TOKEN = MONDAY_API_TOKEN;
 let activityGroupId = null;
 let activitySessionItemId = null;
 
@@ -743,9 +751,8 @@ function launchApp(){
     document.getElementById('settings-btn').style.display='inline-flex';
   }
   initActivitySession();
-  // Use hardcoded token; allow override from localStorage if manually set
-  const saved=localStorage.getItem('rpm_monday_token');
-  MONDAY_TOKEN=saved||HARDCODED_TOKEN;
+  // Always use hardcoded token — consistent for all users everywhere
+  MONDAY_TOKEN=MONDAY_API_TOKEN;
   loadYearConfig();
   setInterval(syncMonday,2*60*1000);
 }
