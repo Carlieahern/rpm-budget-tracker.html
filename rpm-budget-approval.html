@@ -704,20 +704,34 @@ async function syncMonday(){
 }
 
 async function uploadFileToMonday(itemId, fileObj){
-  const token=MONDAY_TOKEN||localStorage.getItem('rpm_monday_token')||'';
-  if(!token||!fileObj)return;
+  if(!MONDAY_TOKEN||!fileObj){
+    console.warn('uploadFileToMonday: missing token or file',{token:!!MONDAY_TOKEN,file:!!fileObj});
+    return;
+  }
+  toast('Uploading file to Monday…','success');
   try{
     const form=new FormData();
     form.append('query',`mutation($file:File!){add_file_to_column(item_id:${itemId},column_id:"${COL.approvalFiles}",file:$file){id}}`);
     form.append('variables[file]',fileObj,fileObj.name);
     const res=await fetch('https://api.monday.com/v2/file',{
       method:'POST',
-      headers:{'Authorization':MONDAY_TOKEN,'API-Version':'2024-01'},
+      headers:{'Authorization':MONDAY_TOKEN},
       body:form
     });
     const json=await res.json();
-    if(json?.errors?.length)console.error('File upload error:',json.errors[0]?.message);
-  }catch(e){console.error('File upload failed',e);}
+    if(json?.errors?.length){
+      console.error('File upload error:',json.errors[0]?.message);
+      toast('File upload failed: '+json.errors[0]?.message,'error');
+    } else if(json?.data?.add_file_to_column?.id){
+      toast('File attached to Monday ✓','success');
+    } else {
+      console.warn('Unexpected file upload response:',json);
+      toast('File upload — unexpected response, check Monday','warning');
+    }
+  }catch(e){
+    console.error('File upload failed',e);
+    toast('File upload failed: '+e.message,'error');
+  }
 }
 
 async function pushToMonday(itemId, columnId, value){
@@ -821,7 +835,7 @@ function launchApp(){
     document.getElementById('admin-badge').style.display='inline-block';
     document.getElementById('settings-btn').style.display='inline-flex';
   }
-  showLoading('Loading Properties...');
+  showLoading('Connecting to Monday...');
   initActivitySession();
   // Always use hardcoded token — consistent for all users everywhere
   MONDAY_TOKEN=MONDAY_API_TOKEN;
