@@ -307,6 +307,8 @@ tr.selected td{background:rgba(184,115,51,.05);}
               <th onclick="sortBy('approvalStatus')">Status ↕</th>
               <th onclick="sortBy('budgetDue')">PMA Deadline ↕</th>
               <th onclick="sortBy('originalApprovalDate')">Orig. Approval ↕</th>
+              <th onclick="sortBy('lastReopenDate')">Last Reopened ↕</th>
+              <th onclick="sortBy('approvalDate')">Curr. Approval ↕</th>
               <th>Actions</th>
             </tr></thead>
             <tbody id="table-body"></tbody>
@@ -440,6 +442,19 @@ tr.selected td{background:rgba(184,115,51,.05);}
   </div>
 </div>
 
+<div class="modal-overlay" id="occ-help-modal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><div><div class="modal-title">📊 How to Find Budgeted Occupancy</div><div class="modal-subtitle">Pulling the occupancy report</div></div><button class="modal-close" onclick="closeModal('occ-help-modal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-section">
+        <p style="font-size:13px;color:var(--text2);line-height:1.7;">Add your instructions here. You can include step-by-step directions and screenshots to help users find the correct occupancy report.</p>
+        <!-- Add steps and images below -->
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-copper" onclick="closeModal('occ-help-modal')">Got It</button></div>
+  </div>
+</div>
+
 <div class="loading-overlay" id="loading"><div class="spinner"></div><div style="color:var(--juniper);font-size:14px;font-weight:600;" id="loading-text">Syncing...</div></div>
 <div class="toast-container" id="toast-container"></div>
 
@@ -498,7 +513,7 @@ let activeTab='board';
 let pendingZendeskUrl='';
 let selectedIds=new Set();
 let S={};
-function resetS(){S={step:1,selectedIds:[],uploadedFile:null,useClientCOA:null,coaName:'',glVerified:null,verifyEdits:{}};}
+function resetS(){S={step:1,selectedIds:[],uploadedFile:null,useClientCOA:null,coaName:'',glVerified:null,verifyEdits:{},occupancy:{jan:'',feb:'',mar:'',apr:'',may:'',jun:'',jul:'',aug:'',sep:'',oct:'',nov:'',dec:''}};}
 let RS={};
 function resetRS(propId){RS={propId,hasWrittenApproval:null,reopenReason:undefined,uploadedFile:null,understood:false};}
 let ticketQueue=[];
@@ -510,22 +525,29 @@ async function mondayQuery(query){
   try{
     const res=await fetch('https://api.monday.com/v2',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':token},
+      headers:{'Content-Type':'application/json','Authorization':token,'API-Version':'2024-01'},
       body:JSON.stringify({query})
     });
-    return await res.json();
+    const json=await res.json();
+    return json;
   }catch(e){console.error('Monday API error',e);return null;}
 }
 
 async function mondayMutation(mutation){
-  return mondayQuery(mutation);
+  const result=await mondayQuery(mutation);
+  if(result?.errors?.length){
+    console.error('Monday mutation error:',JSON.stringify(result.errors));
+    toast('Monday update failed: '+result.errors[0]?.message,'error');
+    return null;
+  }
+  return result;
 }
 
 // ── YEAR CONFIG ──
 async function loadYearConfig(){
   try{
     const result=await mondayQuery(`{boards(ids:${CONFIG_BOARD}){columns{id title type}items_page(limit:50){items{id name column_values{id text}}}}}`);
-    const board=result.boards[0];
+    const board=result?.data?.boards?.[0];
     const cols=board.columns;
     const boardIdCol=cols.find(c=>(c.title.toLowerCase().includes('board')||c.title.toLowerCase().includes('id'))&&c.type!=='name')||cols.find(c=>c.type==='text'||c.type==='long_text');
     yearBoards={};yearItemIds={};
@@ -577,12 +599,12 @@ async function addYear(){
   if(yearBoards[year]){toast(`${year} is already active`,'error');return;}
   try{
     const colResult=await mondayQuery(`{boards(ids:${CONFIG_BOARD}){columns{id title type}}}`);
-    const cols=colResult.boards[0].columns;
+    const cols=colResult?.data?.boards?.[0]?.columns||[];
     const boardIdCol=cols.find(c=>(c.title.toLowerCase().includes('board')||c.title.toLowerCase().includes('id'))&&c.type!=='name')||cols.find(c=>c.type==='text');
     const colVals=boardIdCol?{[boardIdCol.id]:boardId}:{};
     const res=await mondayQuery(`mutation{create_item(board_id:${CONFIG_BOARD},item_name:${JSON.stringify(year)},column_values:${JSON.stringify(JSON.stringify(colVals))}){id}}`);
     yearBoards[year]=boardId;
-    yearItemIds[year]=res.create_item.id;
+    yearItemIds[year]=res?.data?.create_item?.id;
     document.getElementById('new-year-input').value='';
     document.getElementById('new-board-input').value='';
     renderYearButtons();
@@ -679,7 +701,7 @@ async function syncMonday(){
 async function pushToMonday(itemId, columnId, value){
   const token=MONDAY_TOKEN||localStorage.getItem('rpm_monday_token')||'';
   if(!token)return;
-  const val=JSON.stringify(JSON.stringify(value));
+  const val=JSON.stringify(String(value));
   await mondayMutation(`mutation{change_simple_column_value(board_id:${MONDAY_BOARD},item_id:${itemId},column_id:"${columnId}",value:${val}){id}}`);
 }
 
@@ -706,13 +728,13 @@ async function initActivitySession(){
     activityGroupId='group_mm39z216';
     const today=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     const qResult=await mondayQuery(`{boards(ids:${ACTIVITY_BOARD}){groups(ids:"${activityGroupId}"){items_page(limit:100){items{id name}}}}}`);
-    const items=qResult.boards[0].groups[0].items_page.items;
+    const items=qResult?.data?.boards?.[0]?.groups?.[0]?.items_page?.items||[];
     const existing=items.find(it=>it.name===today);
     if(existing){
       activitySessionItemId=existing.id;
     } else {
       const mResult=await mondayQuery(`mutation{create_item(board_id:${ACTIVITY_BOARD},group_id:"${activityGroupId}",item_name:${JSON.stringify(today)}){id}}`);
-      activitySessionItemId=mResult.create_item.id;
+      activitySessionItemId=mResult?.data?.create_item?.id;
     }
     await logActivity('Login');
   }catch(e){console.warn('Activity session init failed',e);}
@@ -843,7 +865,7 @@ function renderTable(){
   const start=(currentPage-1)*PAGE_SIZE;
   const items=filteredProperties.slice(start,start+PAGE_SIZE);
   const tbody=document.getElementById('table-body');
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--text3);">No properties found. Connect to Monday in Settings to load data.</td></tr>`;renderPagination();return;}
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="11" style="text-align:center;padding:48px;color:var(--text3);">No properties found. Connect to Monday in Settings to load data.</td></tr>`;renderPagination();return;}
   tbody.innerHTML=items.map(p=>{
     const sel=selectedIds.has(p.id);
     const showSubmit=!['Ticket Submitted','Approved','Reopened'].includes(p.approvalStatus);
@@ -858,6 +880,8 @@ function renderTable(){
       <td>${statusBadge(p.approvalStatus)}</td>
       <td><span class="cell-date ${!p.budgetDue?'empty':''}">${p.budgetDue||'—'}</span></td>
       <td><span class="cell-date ${!p.originalApprovalDate?'empty':''}">${p.originalApprovalDate||'—'}</span></td>
+      <td><span class="cell-date ${!p.lastReopenDate?'empty':''}">${p.lastReopenDate||'—'}</span></td>
+      <td><span class="cell-date ${p.approvalStatus==='Reopened'||!p.approvalDate?'empty':''}">${p.approvalStatus==='Reopened'?'—':p.approvalDate||'—'}</span></td>
       <td style="white-space:nowrap;"><div style="display:flex;gap:5px;flex-wrap:wrap;">
         ${showSubmit?`<button class="btn-action btn-sm" onclick="openSubmitFlowFor('${p.id}')">📋 Submit</button>`:''}
         ${showReopen?`<button class="btn-reopen btn-sm" onclick="openReopenFlow('${p.id}')">🔄 Reopen</button>`:''}
@@ -1010,7 +1034,7 @@ async function confirmDispose(id){
 }
 
 // ── SUBMIT FLOW ──
-const STEPS=['Upload','Verify','Questions','Open Ticket'];
+const STEPS=['Upload','Verify','Questions','Occupancy','Open Ticket'];
 function openSubmitFlowFor(id){resetS();S.selectedIds=[id];S.step=1;renderSubmitStep();document.getElementById('submit-modal').classList.add('open');}
 
 function progressHtml(current){
@@ -1058,8 +1082,8 @@ function renderSubmitStep(){
         </div></div>`;
       footer.innerHTML=`<button class="btn btn-secondary" onclick="S.step=2;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="stepNext3()" ${S.useClientCOA===null?'disabled style="opacity:.5;"':''}>Continue →</button>`;
     } else if(S.useClientCOA===false){
-      html+=`<div class="info-box success">✓ No GL mapping required. Ready to open ticket.</div>`;
-      footer.innerHTML=`<button class="btn btn-secondary" onclick="S.useClientCOA=null;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="S.step=4;renderSubmitStep()">Next: Open Ticket →</button>`;
+      html+=`<div class="info-box success">✓ No GL mapping required. Ready to continue.</div>`;
+      footer.innerHTML=`<button class="btn btn-secondary" onclick="S.useClientCOA=null;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="S.step=4;renderSubmitStep()">Next: Occupancy →</button>`;
     } else if(S.useClientCOA===true&&!S.coaName){
       html+=`<div class="form-section"><div class="form-section-title">COA Name</div><input type="text" class="form-input" id="coa-name-input" placeholder="e.g. Cardone COA" value="${esc(S.coaName)}"></div>`;
       footer.innerHTML=`<button class="btn btn-secondary" onclick="S.useClientCOA=null;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="saveCOAName()">Continue →</button>`;
@@ -1072,8 +1096,8 @@ function renderSubmitStep(){
         </div></div>`;
       footer.innerHTML=`<button class="btn btn-secondary" onclick="S.coaName='';renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="stepGL()" ${S.glVerified===null?'disabled style="opacity:.5;"':''}>Continue →</button>`;
     } else if(S.glVerified==='yes'){
-      html+=`<div class="info-box success">✓ GL mapping verified. Ready to open ticket.</div>`;
-      footer.innerHTML=`<button class="btn btn-secondary" onclick="S.glVerified=null;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="S.step=4;renderSubmitStep()">Next: Open Ticket →</button>`;
+      html+=`<div class="info-box success">✓ GL mapping verified. Ready to continue.</div>`;
+      footer.innerHTML=`<button class="btn btn-secondary" onclick="S.glVerified=null;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="S.step=4;renderSubmitStep()">Next: Occupancy →</button>`;
     } else {
       html+=`<div class="info-box warning">⚠️ GL mapping must be completed first. <button class="btn btn-sm btn-secondary" style="margin-left:8px;" onclick="closeModal('submit-modal');document.getElementById('process-modal').classList.add('open')">View Steps</button></div>`;
       footer.innerHTML=`<button class="btn btn-secondary" onclick="S.glVerified=null;renderSubmitStep()">← Back</button><button class="btn btn-secondary" onclick="closeModal('submit-modal')">Close — I'll Come Back</button>`;
@@ -1081,15 +1105,41 @@ function renderSubmitStep(){
     body.innerHTML=html;
 
   } else if(S.step===4){
+    const months=[['jan','January'],['feb','February'],['mar','March'],['apr','April'],['may','May'],['jun','June'],['jul','July'],['aug','August'],['sep','September'],['oct','October'],['nov','November'],['dec','December']];
+    const grid=months.map(([k,label])=>`
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" style="font-size:11px;">${label}</label>
+        <div style="position:relative;">
+          <input type="number" class="form-input" step="0.1" min="0" max="100" placeholder="0.0"
+            value="${S.occupancy[k]}"
+            oninput="S.occupancy['${k}']=this.value"
+            style="font-family:var(--mono);text-align:center;padding-right:22px;">
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none;">%</span>
+        </div>
+      </div>`).join('');
+    const allFilled=months.every(([k])=>S.occupancy[k]!=='');
+    body.innerHTML=progressHtml(4)+`
+      <div class="form-section">
+        <div class="form-section-title">Budgeted Occupancy</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:8px;">Enter the budgeted occupancy percentage for each month (e.g. <strong>95.2</strong> for 95.2%).</p>
+        <p style="margin-bottom:14px;"><button onclick="document.getElementById('occ-help-modal').classList.add('open')" style="background:none;border:none;color:var(--copper);font-size:12px;font-weight:600;cursor:pointer;padding:0;font-family:var(--font);">How do I find this? →</button></p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">${grid}</div>
+      </div>`;
+    footer.innerHTML=`<button class="btn btn-secondary" onclick="S.step=3;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="S.step=5;renderSubmitStep()" ${!allFilled?'disabled style="opacity:.5;cursor:not-allowed;"':''}>Next: Open Ticket →</button>`;
+
+  } else if(S.step===5){
     const props=S.selectedIds.map(id=>allProperties.find(p=>p.id===id)).filter(Boolean);
-    body.innerHTML=progressHtml(4)+`<div class="form-section"><div class="form-section-title">Ready to Submit</div>
+    const months=[['jan','Jan'],['feb','Feb'],['mar','Mar'],['apr','Apr'],['may','May'],['jun','Jun'],['jul','Jul'],['aug','Aug'],['sep','Sep'],['oct','Oct'],['nov','Nov'],['dec','Dec']];
+    const occSummary=months.map(([k,l])=>`<span style="font-family:var(--mono);font-size:12px;">${l}: ${S.occupancy[k]?S.occupancy[k]+'%':'—'}</span>`).join('<span style="color:var(--border);margin:0 4px;">|</span>');
+    body.innerHTML=progressHtml(5)+`<div class="form-section"><div class="form-section-title">Ready to Submit</div>
       <div class="info-box success" style="margin-bottom:14px;">✓ All checks passed. Click Open Ticket to create your Zendesk ticket.</div>
       ${props.map(p=>`<div class="verify-row"><span class="verify-label">Property</span><span class="verify-value">${esc(p.name)}</span></div>`).join('')}
       <div class="verify-row"><span class="verify-label">Submitted By</span><span class="verify-value">${esc(currentUser.name)} (${esc(currentUser.position)})</span></div>
       <div class="verify-row"><span class="verify-label">Approval Sign Off</span><span class="verify-value"><a href="#" style="color:var(--copper);" onclick="return false;">📎 ${esc(S.uploadedFile)}</a></span></div>
       <div class="verify-row"><span class="verify-label">Client COA</span><span class="verify-value">${S.useClientCOA?esc(S.coaName):'N/A'}</span></div>
+      <div class="verify-row"><span class="verify-label">Occupancy</span><span class="verify-value" style="flex-wrap:wrap;display:flex;gap:6px;line-height:1.8;">${occSummary}</span></div>
     </div>`;
-    footer.innerHTML=`<button class="btn btn-secondary" onclick="S.step=3;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="openTicket()">🎟 Open Ticket →</button>`;
+    footer.innerHTML=`<button class="btn btn-secondary" onclick="S.step=4;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="openTicket()">🎟 Open Ticket →</button>`;
   }
 }
 
@@ -1266,17 +1316,17 @@ async function updateAdminCheck(ticketId,key,val){
       const today=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
       if(t.isReopen&&p.reopenHistory.length>0){
         p.reopenHistory[p.reopenHistory.length-1].newApprovalDate=today;
-        await pushDateToMonday(p.id,COL.approvalDate,today);
       } else {
-        p.approvalStatus='Approved';
         if(!p.originalApprovalDate){
           p.originalApprovalDate=today;
           await pushDateToMonday(p.id,COL.originalApprovalDate,today);
         }
-        p.approvalDate=today;
-        await pushDateToMonday(p.id,COL.approvalDate,today);
         p.approvalLetter='Yes';
       }
+      // Always update approval date and status on any approval (first or reopen)
+      p.approvalStatus='Approved';
+      p.approvalDate=today;
+      await pushDateToMonday(p.id,COL.approvalDate,today);
       await pushStatusToMonday(p.id,COL.status,'Approved');
     }
     const approvedProp=allProperties.find(x=>x.id===t.propId);
