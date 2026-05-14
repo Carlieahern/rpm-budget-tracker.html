@@ -238,11 +238,7 @@ tr.selected td{background:rgba(184,115,51,.05);}
       <div style="width:36px;height:36px;background:var(--juniper);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✅</div>
       <span class="header-title">Budget Approval Status</span>
       <div style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;display:none;background:rgba(184,115,51,.15);color:var(--copper);" id="admin-badge">ADMIN</div>
-      <div class="year-switcher">
-        <button class="year-btn" id="btn-2026" onclick="switchYear(2026)">2026</button>
-        <button class="year-btn active" id="btn-2027" onclick="switchYear(2027)">2027</button>
-        <button class="year-btn" id="btn-2028" onclick="switchYear(2028)">2028</button>
-      </div>
+      <div class="year-switcher" id="year-switcher"></div>
     </div>
     <div class="header-right">
       <span id="header-user" style="font-size:12px;color:var(--text2);"></span>
@@ -412,14 +408,23 @@ tr.selected td{background:rgba(184,115,51,.05);}
 </div>
 
 <div class="modal-overlay" id="settings-modal">
-  <div class="modal" style="max-width:480px;">
+  <div class="modal" style="max-width:520px;">
     <div class="modal-header"><div><div class="modal-title">⚙️ Settings</div><div class="modal-subtitle">Monday.com Connection</div></div><button class="modal-close" onclick="closeModal('settings-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-section">
-        <div class="form-section-title">Monday.com</div>
-        <div class="form-group"><label class="form-label">API Token</label><input type="password" class="form-input" id="settings-token" placeholder="eyJhbGciOiJIUzI1NiJ9..."></div>
-        <div class="form-group"><label class="form-label">Board ID</label><input type="text" class="form-input" id="settings-board" value="18409851670"></div>
-        <div id="settings-status" style="font-size:12px;color:var(--text3);margin-top:8px;"></div>
+        <div class="form-section-title">API Token</div>
+        <div class="form-group"><label class="form-label">Monday.com API Token</label><input type="password" class="form-input" id="settings-token" placeholder="eyJhbGciOiJIUzI1NiJ9..."></div>
+        <div id="settings-status" style="font-size:12px;color:var(--text3);margin-top:4px;"></div>
+      </div>
+      <div class="form-section" id="year-mgmt-section" style="display:none;">
+        <div class="form-section-title">Year Management</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:10px;">Each year connects to its own Monday board. Archiving a year removes it from the app — the Monday board is not deleted.</p>
+        <div id="year-list-settings" style="margin-bottom:12px;"></div>
+        <div style="display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:flex-end;">
+          <div class="form-group" style="margin-bottom:0;"><label class="form-label">Year</label><input type="text" class="form-input" id="new-year-input" placeholder="2028" maxlength="4"></div>
+          <div class="form-group" style="margin-bottom:0;"><label class="form-label">Board ID</label><input type="text" class="form-input" id="new-board-input" placeholder="18xxxxxxxxx"></div>
+          <button class="btn btn-copper" onclick="addYear()" style="height:36px;">Add</button>
+        </div>
       </div>
       <div class="form-section">
         <div class="form-section-title">Data</div>
@@ -430,7 +435,7 @@ tr.selected td{background:rgba(184,115,51,.05);}
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Cancel</button>
-      <button class="btn btn-copper" onclick="saveSettings()">Save & Connect</button>
+      <button class="btn btn-copper" onclick="saveSettings()">Save Token</button>
     </div>
   </div>
 </div>
@@ -440,8 +445,11 @@ tr.selected td{background:rgba(184,115,51,.05);}
 
 <script>
 // ── MONDAY CONFIG ──
-let MONDAY_BOARD = localStorage.getItem('rpm_monday_board') || '18409851670';
+const CONFIG_BOARD = '18413190457';
 const ACTIVITY_BOARD = '18407376110';
+let MONDAY_BOARD = '18413186439'; // default 2027, overwritten by loadYearConfig
+let yearBoards  = {};  // { '2027': '18413186439' }
+let yearItemIds = {};  // { '2027': 'monday_item_id' } — used for deletion
 const ACTIVITY_COLS = {
   time:        'text_mm25vhjm',
   username:    'text_mm25nn6r',
@@ -504,6 +512,94 @@ async function mondayQuery(query){
 
 async function mondayMutation(mutation){
   return mondayQuery(mutation);
+}
+
+// ── YEAR CONFIG ──
+async function loadYearConfig(){
+  try{
+    const result=await mondayQuery(`{boards(ids:${CONFIG_BOARD}){columns{id title type}items_page(limit:50){items{id name column_values{id text}}}}}`);
+    const board=result.boards[0];
+    const cols=board.columns;
+    const boardIdCol=cols.find(c=>(c.title.toLowerCase().includes('board')||c.title.toLowerCase().includes('id'))&&c.type!=='name')||cols.find(c=>c.type==='text'||c.type==='long_text');
+    yearBoards={};yearItemIds={};
+    board.items_page.items.forEach(item=>{
+      const year=item.name.trim();
+      const boardId=boardIdCol?item.column_values.find(c=>c.id===boardIdCol.id)?.text?.trim():item.column_values.find(c=>c.text)?.text?.trim();
+      if(year&&boardId){yearBoards[year]=boardId;yearItemIds[year]=item.id;}
+    });
+    const years=Object.keys(yearBoards).sort();
+    if(years.length>0){
+      if(!yearBoards[currentYear.toString()])currentYear=parseInt(years[years.length-1]);
+      MONDAY_BOARD=yearBoards[currentYear.toString()];
+    }
+  }catch(e){
+    console.warn('loadYearConfig failed, using defaults',e);
+    yearBoards={'2027':'18413186439'};
+    MONDAY_BOARD='18413186439';
+    currentYear=2027;
+  }
+  renderYearButtons();
+  syncMonday();
+}
+
+function renderYearButtons(){
+  const el=document.getElementById('year-switcher');
+  if(!el)return;
+  const years=Object.keys(yearBoards).sort();
+  el.innerHTML=years.map(y=>`<button class="year-btn${parseInt(y)===currentYear?' active':''}" onclick="switchYear(${y})">${y}</button>`).join('');
+}
+
+function renderYearListSettings(){
+  const el=document.getElementById('year-list-settings');
+  if(!el)return;
+  const years=Object.keys(yearBoards).sort();
+  if(!years.length){el.innerHTML='<p style="font-size:13px;color:var(--text3);">No years configured.</p>';return;}
+  const only=(years.length===1);
+  el.innerHTML=`<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">${years.map(y=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;${parseInt(y)===currentYear?'background:rgba(184,115,51,.05);':''}border-bottom:1px solid var(--border);">
+      <div><span style="font-family:var(--mono);font-weight:700;font-size:13px;">${y}</span><span style="font-size:11px;color:var(--text3);margin-left:10px;">${yearBoards[y]}</span>${parseInt(y)===currentYear?'<span style="font-size:10px;color:var(--copper);font-weight:600;margin-left:8px;">ACTIVE</span>':''}</div>
+      <button onclick="archiveYear('${y}')" class="btn btn-danger btn-sm"${only?' disabled title="Cannot remove the only active year"':''}>Archive</button>
+    </div>`).join('')}</div>`;
+}
+
+async function addYear(){
+  const year=document.getElementById('new-year-input').value.trim();
+  const boardId=document.getElementById('new-board-input').value.trim();
+  if(!/^\d{4}$/.test(year)){toast('Enter a valid 4-digit year','error');return;}
+  if(!boardId){toast('Enter the Board ID','error');return;}
+  if(yearBoards[year]){toast(`${year} is already active`,'error');return;}
+  try{
+    const colResult=await mondayQuery(`{boards(ids:${CONFIG_BOARD}){columns{id title type}}}`);
+    const cols=colResult.boards[0].columns;
+    const boardIdCol=cols.find(c=>(c.title.toLowerCase().includes('board')||c.title.toLowerCase().includes('id'))&&c.type!=='name')||cols.find(c=>c.type==='text');
+    const colVals=boardIdCol?{[boardIdCol.id]:boardId}:{};
+    const res=await mondayQuery(`mutation{create_item(board_id:${CONFIG_BOARD},item_name:${JSON.stringify(year)},column_values:${JSON.stringify(JSON.stringify(colVals))}){id}}`);
+    yearBoards[year]=boardId;
+    yearItemIds[year]=res.create_item.id;
+    document.getElementById('new-year-input').value='';
+    document.getElementById('new-board-input').value='';
+    renderYearButtons();
+    renderYearListSettings();
+    toast(`Year ${year} added`,'success');
+  }catch(e){console.warn('addYear failed',e);toast('Failed to add year','error');}
+}
+
+async function archiveYear(year){
+  if(Object.keys(yearBoards).length<=1){toast('Cannot archive the only active year','error');return;}
+  if(!confirm(`Remove ${year} from the app?\n\nThe Monday board won't be deleted — archive it manually in Monday when ready.`))return;
+  try{
+    const itemId=yearItemIds[year];
+    if(itemId)await mondayQuery(`mutation{delete_item(item_id:${itemId}){id}}`);
+    delete yearBoards[year];delete yearItemIds[year];
+    if(currentYear.toString()===year){
+      const rem=Object.keys(yearBoards).sort();
+      currentYear=parseInt(rem[rem.length-1]);
+      MONDAY_BOARD=yearBoards[currentYear.toString()];
+      syncMonday();
+    }
+    renderYearButtons();renderYearListSettings();
+    toast(`${year} removed from app`,'success');
+  }catch(e){console.warn('archiveYear failed',e);toast('Failed to archive year','error');}
 }
 
 async function syncMonday(){
@@ -649,9 +745,8 @@ function launchApp(){
   initActivitySession();
   // Use hardcoded token; allow override from localStorage if manually set
   const saved=localStorage.getItem('rpm_monday_token');
-  if(saved)MONDAY_TOKEN=saved;
-  else MONDAY_TOKEN=HARDCODED_TOKEN;
-  syncMonday();
+  MONDAY_TOKEN=saved||HARDCODED_TOKEN;
+  loadYearConfig();
   setInterval(syncMonday,2*60*1000);
 }
 
@@ -659,22 +754,21 @@ function launchApp(){
 function openSettings(){
   const savedToken=localStorage.getItem('rpm_monday_token');
   if(savedToken)document.getElementById('settings-token').value=savedToken;
-  document.getElementById('settings-board').value=MONDAY_BOARD;
+  if(isAdmin){
+    document.getElementById('year-mgmt-section').style.display='block';
+    renderYearListSettings();
+  }
   document.getElementById('settings-modal').classList.add('open');
 }
 function saveSettings(){
   const token=document.getElementById('settings-token').value.trim();
-  const board=document.getElementById('settings-board').value.trim();
-  if(!token){toast('Please enter your API token','error');return;}
-  if(!board){toast('Please enter the Board ID','error');return;}
-  MONDAY_TOKEN=token;
-  MONDAY_BOARD=board;
-  localStorage.setItem('rpm_monday_token',token);
-  localStorage.setItem('rpm_monday_board',board);
-  document.getElementById('settings-status').textContent='✓ Saved — syncing...';
-  document.getElementById('settings-status').style.color='var(--green)';
+  if(token){
+    MONDAY_TOKEN=token;
+    localStorage.setItem('rpm_monday_token',token);
+    document.getElementById('settings-status').textContent='✓ Token saved';
+    document.getElementById('settings-status').style.color='var(--green)';
+  }
   closeModal('settings-modal');
-  syncMonday();
 }
 
 // ── TABS ──
@@ -1245,7 +1339,13 @@ function exportQueue(){
 }
 
 // ── MISC ──
-function switchYear(y){currentYear=y;[2026,2027,2028].forEach(yr=>{const btn=document.getElementById('btn-'+yr);if(btn)btn.classList.toggle('active',yr===y);});filterTable();}
+function switchYear(y){
+  currentYear=y;
+  MONDAY_BOARD=yearBoards[y.toString()]||MONDAY_BOARD;
+  renderYearButtons();
+  document.getElementById('report-title').textContent=y+' Approval Status Report';
+  syncMonday();
+}
 function goToHub(){
   localStorage.setItem('rpm_hub_return', JSON.stringify({name:currentUser.name,firstName:currentUser.firstName,lastName:currentUser.lastName,email:currentUser.email,position:currentUser.position,isAdmin}));
   window.location.href='index.html';
