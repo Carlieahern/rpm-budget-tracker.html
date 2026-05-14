@@ -612,23 +612,39 @@ async function archiveYear(year){
 async function syncMonday(){
   const btn=document.getElementById('sync-btn');
   if(btn){btn.textContent='🔄 Syncing...';btn.disabled=true;}
-  const data=await mondayQuery(`{
-    boards(ids:${MONDAY_BOARD}){
-      items_page(limit:500){
-        items{
-          id name
-          column_values{id text value}
-        }
-      }
+
+  // Fetch all items using cursor-based pagination (handles 800-1000+ properties)
+  let allItems=[];
+  try{
+    // First page
+    const first=await mondayQuery(`{boards(ids:${MONDAY_BOARD}){items_page(limit:500){cursor items{id name column_values{id text value}}}}}`);
+    if(!first?.data?.boards?.[0]){
+      if(btn){btn.textContent='🔄 Sync';btn.disabled=false;}
+      toast('Sync failed — check your token in Settings','error');
+      return;
     }
-  }`);
-  if(btn){btn.textContent='🔄 Sync';btn.disabled=false;}
-  if(!data?.data?.boards?.[0]){
+    const page1=first.data.boards[0].items_page;
+    allItems=allItems.concat(page1.items||[]);
+    let cursor=page1.cursor;
+
+    // Continue fetching while there are more pages
+    while(cursor){
+      const next=await mondayQuery(`{next_items_page(limit:500,cursor:${JSON.stringify(cursor)}){cursor items{id name column_values{id text value}}}}`);
+      if(!next?.data?.next_items_page)break;
+      const pageN=next.data.next_items_page;
+      allItems=allItems.concat(pageN.items||[]);
+      cursor=pageN.cursor;
+    }
+  }catch(e){
+    console.error('syncMonday failed',e);
+    if(btn){btn.textContent='🔄 Sync';btn.disabled=false;}
     toast('Sync failed — check your token in Settings','error');
     return;
   }
-  const items=data.data.boards[0].items_page.items||[];
-  allProperties=items.map(item=>{
+
+  if(btn){btn.textContent='🔄 Sync';btn.disabled=false;}
+
+  allProperties=allItems.map(item=>{
     const col=id=>item.column_values.find(c=>c.id===id)?.text||'';
     return {
       id:item.id,
@@ -657,7 +673,7 @@ async function syncMonday(){
     };
   });
   filterTable();updateStats();
-  toast('Synced with Monday','success');
+  toast(`Synced ${allItems.length} properties`,'success');
 }
 
 async function pushToMonday(itemId, columnId, value){
