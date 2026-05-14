@@ -1196,7 +1196,16 @@ function renderSubmitStep(){
 function toggleEdit(key,currentVal){if(S.verifyEdits[key]!==undefined)delete S.verifyEdits[key];else S.verifyEdits[key]=currentVal;renderSubmitStep();}
 function stepNext1(){if(!S.uploadedFile){toast('Please upload the approval sign off','error');return;}S.step=2;renderSubmitStep();}
 function triggerUpload(){document.getElementById('file-input').click();}
-function handleFile(input){if(input.files&&input.files[0]){S.uploadedFile=input.files[0].name;S.uploadedFileObj=input.files[0];renderSubmitStep();}}
+function handleFile(input){
+  if(input.files&&input.files[0]){
+    const file=input.files[0];
+    S.uploadedFile=file.name;
+    S.uploadedFileObj=file;
+    renderSubmitStep();
+    // Upload immediately while File object is fresh and input is still in DOM
+    S.selectedIds.forEach(id=>uploadFileToMonday(id,file));
+  }
+}
 function stepNext3(){if(S.useClientCOA===null){toast('Please select an option','error');return;}renderSubmitStep();}
 function saveCOAName(){const v=document.getElementById('coa-name-input')?.value?.trim();if(!v){toast('Please enter the COA name','error');return;}S.coaName=v;renderSubmitStep();}
 function stepGL(){if(!S.glVerified){toast('Please select an option','error');return;}renderSubmitStep();}
@@ -1218,7 +1227,6 @@ async function openTicket(){
       await pushDateToMonday(p.id,COL.originalApprovalDate,today);
     }
     await pushStatusToMonday(p.id,COL.status,'Ticket Submitted');
-    if(S.uploadedFileObj)await uploadFileToMonday(p.id,S.uploadedFileObj);
   }
 
   const newTicket={id:'t'+Date.now(),propId:props[0].id,propName:props.map(x=>x.name).join(', '),code:props.map(x=>x.code).join(', '),submittedBy:currentUser.name,position:currentUser.position,email:currentUser.email,dateSubmitted:today,isReopen:false,adminChecks:{imported:false,finalized:false,occDone:false},status:'Ticket Submitted',uploadedFile:S.uploadedFile};
@@ -1304,7 +1312,15 @@ function renderReopenStep(){
 }
 
 function triggerReopenUpload(){document.getElementById('reopen-file-input').click();}
-function handleReopenFile(input){if(input.files&&input.files[0]){RS.uploadedFile=input.files[0].name;RS.uploadedFileObj=input.files[0];renderReopenStep();}}
+function handleReopenFile(input){
+  if(input.files&&input.files[0]){
+    const file=input.files[0];
+    RS.uploadedFile=file.name;
+    RS.uploadedFileObj=file;
+    renderReopenStep();
+    uploadFileToMonday(RS.propId,file);
+  }
+}
 
 async function submitReopen(){
   const p=allProperties.find(x=>x.id===RS.propId);if(!p)return;
@@ -1319,8 +1335,6 @@ async function submitReopen(){
   await pushToMonday(p.id,COL.reopenCount,String(newCount));
   p.reopenCount=String(newCount);
   p.lastReopenDate=today;
-  if(RS.uploadedFileObj)await uploadFileToMonday(p.id,RS.uploadedFileObj);
-
   const subject=`Budget Reopen — ${p.name} (${p.code}) — ${currentYear}`;
   const desc=`Reopen by: ${currentUser.name} (${currentUser.position}) — ${currentUser.email}\n\nProperty: ${p.name} (${p.code})\nOriginal Approval: ${p.originalApprovalDate||'—'}\nReopen Date: ${today}\nReason: ${RS.reopenReason==='relocating'?'Relocating income/expenses':'Adding new expenses/income'}\n${RS.uploadedFile?`Written Approval: ${RS.uploadedFile}`:'No written approval required'}`;
   pendingZendeskUrl=buildZendeskUrl(subject,desc);
@@ -1470,7 +1484,13 @@ function renderResubmitStep(){
 }
 
 function handleResubmitFile(input){
-  if(input.files&&input.files[0]){TS.uploadedFile=input.files[0].name;TS.uploadedFileObj=input.files[0];renderResubmitStep();}
+  if(input.files&&input.files[0]){
+    const file=input.files[0];
+    TS.uploadedFile=file.name;
+    TS.uploadedFileObj=file;
+    renderResubmitStep();
+    uploadFileToMonday(TS.propId,file);
+  }
 }
 
 async function submitResubmit(){
@@ -1484,7 +1504,6 @@ async function submitResubmit(){
 
   p.approvalStatus='Ticket Submitted';
   await pushStatusToMonday(p.id,COL.status,'Ticket Submitted');
-  if(TS.uploadedFileObj)await uploadFileToMonday(p.id,TS.uploadedFileObj);
 
   const newTicket={id:'t'+Date.now(),propId:p.id,propName:p.name,code:p.code,submittedBy:currentUser.name,position:currentUser.position,email:currentUser.email,dateSubmitted:today,isReopen:true,adminChecks:{imported:false,finalized:false,occDone:false},status:'Ticket Submitted',uploadedFile:TS.uploadedFile||null};
   ticketQueue.push(newTicket);
