@@ -713,7 +713,7 @@ async function uploadFileToMonday(itemId, fileObj){
     const form=new FormData();
     form.append('query',`mutation($file:File!){add_file_to_column(item_id:${itemId},column_id:"${COL.approvalFiles}",file:$file){id}}`);
     form.append('variables[file]',fileObj,fileObj.name);
-    const res=await fetch('https://api.monday.com/v2/file',{
+    const res=await fetch('/api/upload',{
       method:'POST',
       headers:{'Authorization':MONDAY_TOKEN},
       body:form
