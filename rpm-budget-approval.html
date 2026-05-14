@@ -1110,22 +1110,21 @@ function renderSubmitStep(){
       <div class="form-group" style="margin-bottom:0;">
         <label class="form-label" style="font-size:11px;">${label}</label>
         <div style="position:relative;">
-          <input type="number" class="form-input" step="0.1" min="0" max="100" placeholder="0.0"
+          <input type="number" class="form-input" step="any" min="0" max="100" placeholder="0"
             value="${S.occupancy[k]}"
             oninput="S.occupancy['${k}']=this.value"
             style="font-family:var(--mono);text-align:center;padding-right:22px;">
           <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none;">%</span>
         </div>
       </div>`).join('');
-    const allFilled=months.every(([k])=>S.occupancy[k]!=='');
     body.innerHTML=progressHtml(4)+`
       <div class="form-section">
         <div class="form-section-title">Budgeted Occupancy</div>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:8px;">Enter the budgeted occupancy percentage for each month (e.g. <strong>95.2</strong> for 95.2%).</p>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:8px;">Enter the budgeted occupancy percentage for each month (e.g. <strong>95</strong> or <strong>95.2</strong>).</p>
         <p style="margin-bottom:14px;"><button onclick="document.getElementById('occ-help-modal').classList.add('open')" style="background:none;border:none;color:var(--copper);font-size:12px;font-weight:600;cursor:pointer;padding:0;font-family:var(--font);">How do I find this? →</button></p>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">${grid}</div>
       </div>`;
-    footer.innerHTML=`<button class="btn btn-secondary" onclick="S.step=3;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="S.step=5;renderSubmitStep()" ${!allFilled?'disabled style="opacity:.5;cursor:not-allowed;"':''}>Next: Open Ticket →</button>`;
+    footer.innerHTML=`<button class="btn btn-secondary" onclick="S.step=3;renderSubmitStep()">← Back</button><button class="btn btn-copper" onclick="S.step=5;renderSubmitStep()">Next: Open Ticket →</button>`;
 
   } else if(S.step===5){
     const props=S.selectedIds.map(id=>allProperties.find(p=>p.id===id)).filter(Boolean);
