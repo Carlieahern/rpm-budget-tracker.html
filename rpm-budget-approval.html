@@ -682,7 +682,7 @@ async function syncMonday(){
       burden:col(COL.burden),
       payrollDetail:col(COL.payrollDetail),
       state:col(COL.state),
-      approvalStatus:col(COL.status)||'Not Started',
+      approvalStatus:fromMondayStatus(col(COL.status)),
       originalApprovalDate:col(COL.originalApprovalDate),
       approvalDate:col(COL.approvalDate),
       occVacEntryDate:col(COL.occVacEntryDate),
@@ -715,9 +715,21 @@ async function pushDateToMonday(itemId, columnId, dateStr){
   await mondayMutation(`mutation{change_column_value(board_id:${MONDAY_BOARD},item_id:${itemId},column_id:"${columnId}",value:${val}){id}}`);
 }
 
-async function pushStatusToMonday(itemId, columnId, label){
+// Map app status names → Monday label names (must match exactly what's in the column)
+function toMondayStatus(s){
+  const map={'Ticket Submitted':'In Progress','Reopened':'Re-opened','Approved':'Approved','Disposed':'Removed','Not Started':''};
+  return map[s]!==undefined?map[s]:s;
+}
+// Map Monday label names → app status names (used when reading back from sync)
+function fromMondayStatus(s){
+  const map={'In Progress':'Ticket Submitted','Re-opened':'Reopened','Approved':'Approved','Removed':'Disposed'};
+  return map[s]||s||'Not Started';
+}
+
+async function pushStatusToMonday(itemId, columnId, appStatus){
   const token=MONDAY_TOKEN||localStorage.getItem('rpm_monday_token')||'';
   if(!token)return;
+  const label=toMondayStatus(appStatus);
   const val=JSON.stringify(JSON.stringify({label}));
   await mondayMutation(`mutation{change_column_value(board_id:${MONDAY_BOARD},item_id:${itemId},column_id:"${columnId}",value:${val}){id}}`);
 }
@@ -1158,10 +1170,14 @@ async function openTicket(){
   pendingZendeskUrl=buildZendeskUrl(subject,desc);
   const today=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 
-  // Update Monday status for each property
+  // Update Monday status and stamp original approval date for each property
   for(const p of props){
     p.approvalStatus='Ticket Submitted';
     p.approvalLetter='Yes';
+    if(!p.originalApprovalDate){
+      p.originalApprovalDate=today;
+      await pushDateToMonday(p.id,COL.originalApprovalDate,today);
+    }
     await pushStatusToMonday(p.id,COL.status,'Ticket Submitted');
   }
 
@@ -1316,10 +1332,6 @@ async function updateAdminCheck(ticketId,key,val){
       if(t.isReopen&&p.reopenHistory.length>0){
         p.reopenHistory[p.reopenHistory.length-1].newApprovalDate=today;
       } else {
-        if(!p.originalApprovalDate){
-          p.originalApprovalDate=today;
-          await pushDateToMonday(p.id,COL.originalApprovalDate,today);
-        }
         p.approvalLetter='Yes';
       }
       // Always update approval date and status on any approval (first or reopen)
