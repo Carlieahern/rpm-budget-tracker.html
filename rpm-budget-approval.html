@@ -175,9 +175,10 @@ tr.selected td{background:rgba(184,115,51,.05);}
 .tab-btn{padding:12px 16px;font-size:13px;font-weight:500;color:var(--text2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
 .tab-btn:hover{color:var(--text);}
 .tab-btn.active{color:var(--copper);border-bottom-color:var(--copper);font-weight:600;}
-.loading-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:2000;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,.92);z-index:2000;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
 .loading-overlay.visible{display:flex;}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--copper);border-radius:50%;animation:spin .7s linear infinite;}
+.loading-text{color:var(--juniper);font-size:14px;font-weight:600;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .toast-container{position:fixed;bottom:20px;right:20px;z-index:3000;display:flex;flex-direction:column;gap:8px;}
 .toast{background:var(--juniper);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;font-size:13px;color:#fff;animation:slideIn .3s ease;max-width:320px;}
@@ -457,6 +458,7 @@ tr.selected td{background:rgba(184,115,51,.05);}
 
 <div class="loading-overlay" id="loading"><div class="spinner"></div><div style="color:var(--juniper);font-size:14px;font-weight:600;" id="loading-text">Syncing...</div></div>
 <div class="toast-container" id="toast-container"></div>
+<div class="loading-overlay" id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading...</div></div>
 
 <script>
 // ╔══════════════════════════════════════════════════════════════════╗
@@ -642,6 +644,7 @@ async function syncMonday(){
     const first=await mondayQuery(`{boards(ids:${MONDAY_BOARD}){items_page(limit:500){cursor items{id name column_values{id text value}}}}}`);
     if(!first?.data?.boards?.[0]){
       if(btn){btn.textContent='🔄 Sync';btn.disabled=false;}
+      hideLoading();
       toast('Sync failed — check your token in Settings','error');
       return;
     }
@@ -660,6 +663,7 @@ async function syncMonday(){
   }catch(e){
     console.error('syncMonday failed',e);
     if(btn){btn.textContent='🔄 Sync';btn.disabled=false;}
+    hideLoading();
     toast('Sync failed — check your token in Settings','error');
     return;
   }
@@ -695,6 +699,7 @@ async function syncMonday(){
     };
   });
   filterTable();updateStats();
+  hideLoading();
   toast(`Synced ${allItems.length} properties`,'success');
 }
 
@@ -816,6 +821,7 @@ function launchApp(){
     document.getElementById('admin-badge').style.display='inline-block';
     document.getElementById('settings-btn').style.display='inline-flex';
   }
+  showLoading('Connecting to Monday...');
   initActivitySession();
   // Always use hardcoded token — consistent for all users everywhere
   MONDAY_TOKEN=MONDAY_API_TOKEN;
@@ -1324,7 +1330,7 @@ function resetTS(propId){
   const p=allProperties.find(x=>x.id===propId);
   const lastReopen=p?.reopenHistory?.length>0?p.reopenHistory[p.reopenHistory.length-1]:null;
   const isRelocating=lastReopen?.reason==='relocating';
-  TS={propId,step:1,lastReopen,isRelocating,confirmedNoChange:null,needsFile:!isRelocating,uploadedFile:null,updateOccupancy:null,occupancy:{jan:'',feb:'',mar:'',apr:'',may:'',jun:'',jul:'',aug:'',sep:'',oct:'',nov:'',dec:''}};
+  TS={propId,step:1,lastReopen,isRelocating,confirmedNoChange:null,needsFile:!isRelocating,uploadedFile:null,uploadedFileObj:null,updateOccupancy:null,occupancy:{jan:'',feb:'',mar:'',apr:'',may:'',jun:'',jul:'',aug:'',sep:'',oct:'',nov:'',dec:''}};
 }
 function openResubmitFlowFor(id){
   resetTS(id);
@@ -1400,8 +1406,11 @@ function renderResubmitStep(){
       :TS.updateOccupancy
         ?`<button class="btn btn-copper" onclick="TS.step=3;renderResubmitStep()">Next: Enter Occupancy →</button>`
         :`<button class="btn btn-copper" onclick="TS.step=4;renderResubmitStep()">Next: Review →</button>`;
-    const backTarget=TS.needsFile?1:(TS.isRelocating?1:1);
-    footer.innerHTML=`<button class="btn btn-secondary" onclick="TS.step=1;renderResubmitStep()">← Back</button>${nextBtn}`;
+    // Reset step 1 state so confirmation/upload shows correctly on back
+    const backToStep1=TS.isRelocating
+      ?`TS.confirmedNoChange=null;TS.needsFile=false;TS.step=1;renderResubmitStep()`
+      :`TS.uploadedFile=null;TS.uploadedFileObj=null;TS.step=1;renderResubmitStep()`;
+    footer.innerHTML=`<button class="btn btn-secondary" onclick="${backToStep1}">← Back</button>${nextBtn}`;
 
   }else if(TS.step===3){
     // ── Occupancy input ──
@@ -1612,6 +1621,20 @@ function goToHub(){
   window.location.href='index.html';
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
+function showLoading(t){
+  const el=document.getElementById('loading-text');
+  if(el)el.textContent=t||'Loading...';
+  document.getElementById('loading').classList.add('visible');
+  if(window._loadTimer1)clearTimeout(window._loadTimer1);
+  if(window._loadTimer2)clearTimeout(window._loadTimer2);
+  window._loadTimer1=setTimeout(()=>{if(document.getElementById('loading').classList.contains('visible')&&el)el.textContent='Almost there...';},10000);
+  window._loadTimer2=setTimeout(()=>{if(document.getElementById('loading').classList.contains('visible')&&el)el.textContent='Just a few more seconds...';},15000);
+}
+function hideLoading(){
+  document.getElementById('loading').classList.remove('visible');
+  if(window._loadTimer1)clearTimeout(window._loadTimer1);
+  if(window._loadTimer2)clearTimeout(window._loadTimer2);
+}
 function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type='success'){const c=document.getElementById('toast-container');const t=document.createElement('div');t.className=`toast ${type==='error'?'error':type==='warning'?'warning':''}`;t.innerHTML=`<span>${type==='success'?'✓':'⚠'}</span> ${msg}`;c.appendChild(t);setTimeout(()=>t.remove(),4000);}
 document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
