@@ -1104,14 +1104,14 @@ async function loadItems() {
 // BACKFILL 2026 FROM 2027
 // ============================================================
 async function runBackfill() {
-  // Determine available year groups dynamically
-  const years = Object.keys(siteGroupIds).filter(k => !isNaN(k)).map(Number).sort();
-  if (years.length < 2) { showToast('Need at least 2 year groups to run backfill', 'error'); return; }
-
-  const sourceYear = years[years.length - 2]; // e.g. 2026
-  const targetYear = years[years.length - 1]; // e.g. 2027
+  // Use current viewing year as target, previous year as source
+  const targetYear = currentYear;
+  const sourceYear = currentYear - 1;
   const sourceGroup = siteGroupIds[sourceYear];
   const targetGroup = siteGroupIds[targetYear];
+
+  if (!sourceGroup) { showToast(`No ${sourceYear} group found on the Monday board`, 'error'); return; }
+  if (!targetGroup) { showToast(`No ${targetYear} group found on the Monday board`, 'error'); return; }
 
   if (!COL.budgetDue) { showToast('"Budget Due to Client per PMA" column not found', 'error'); return; }
   if (!confirm(`This will copy the "Budget Due to Client per PMA" date from ${sourceYear} to matching ${targetYear} properties, moving the date forward by 1 year.\n\nExisting dates in ${targetYear} will be overwritten.\n\nContinue?`)) return;
