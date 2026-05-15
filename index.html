@@ -386,7 +386,7 @@
           </div>
         </div>
         <div class="toolbar">
-          <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" class="search-input" id="search-input" placeholder="Search property, owner, code, manager..." oninput="filterTable()"></div>
+          <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" class="search-input" id="search-input" placeholder="Search property, former name, owner, code, manager..." oninput="filterTable()"></div>
           <select class="filter-select" id="filter-status" onchange="filterTable()">
             <option value="">All Statuses</option>
             <option>RPM Managed</option>
@@ -809,6 +809,7 @@ async function launchTracker() {
       else if (t === 'comments') COL.comments = col.id;
       else if (t === 'status') { COL.status = col.id; COL.statusType = col.type; }
       else if (t === 'completion status') COL.completionStatus = col.id;
+      else if (t === 'former property name') COL.formerName = col.id;
     });
     hideLoading();
     document.getElementById('setup-screen').style.display = 'none';
@@ -944,6 +945,7 @@ async function connect() {
       else if (t === 'comments') COL.comments = col.id;
       else if (t === 'status') { COL.status = col.id; COL.statusType = col.type; }
       else if (t === 'completion status') COL.completionStatus = col.id;
+      else if (t === 'former property name') COL.formerName = col.id;
       // Target date columns
       else if (t === 'forecast target') COL.forecastTarget = col.id;
       else if (t === 'first draft target') COL.firstDraftTarget = col.id;
@@ -1087,6 +1089,7 @@ async function loadItems() {
         metPMA: cv[COL.metPMA] || '',
         comments: cv[COL.comments] || '',
         status: cv[COL.status] || '',
+        formerName: cv[COL.formerName] || '',
       };
     });
 
@@ -1378,7 +1381,7 @@ function filterTable() {
   const rvp = '';
   const status = document.getElementById('filter-status').value;
   filteredProperties = allProperties.filter(p => {
-    const ms = !search || [p.name,p.code,p.owner,p.rvp,p.rm,p.cm,p.svp,p.srcm,p.srrm].some(v => v&&v.toLowerCase().includes(search));
+    const ms = !search || [p.name,p.formerName,p.code,p.owner,p.rvp,p.rm,p.cm,p.svp,p.srcm,p.srrm].some(v => v&&v.toLowerCase().includes(search));
     const mo = !owner || p.owner === owner;
     const mr = !rvp || p.rvp === rvp;
     const mst = !status || p.status === status;
