@@ -61,6 +61,8 @@
   .year-switch-title { font-size:18px; font-weight:700; color:var(--juniper); margin-bottom:8px; }
   .year-switch-sub { font-size:13px; color:var(--text2); margin-bottom:24px; line-height:1.6; }
   .year-switch-actions { display:flex; gap:10px; justify-content:center; }
+  .btn-dispo{background:#C0392B;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;}
+  .btn-dispo:hover{background:#96281B;}
 
   /* LAYOUT */
   .layout { display:flex; height:calc(100vh - 60px); }
@@ -388,12 +390,13 @@
           <select class="filter-select" id="filter-status" onchange="filterTable()">
             <option value="">All Statuses</option>
             <option>RPM Managed</option>
-            <option>Dispositioning</option>
+            <option>Dispo</option>
           </select>
         </div>
         <div class="bulk-bar" id="bulk-bar">
           <span><span class="bulk-count" id="bulk-count">0</span> selected</span>
           <button class="btn btn-secondary" onclick="openBulkEdit()">✏️ Bulk Edit Dates</button>
+          <button class="btn-dispo" onclick="openBulkDispo()">🏠 Bulk Dispo</button>
           <button class="btn btn-danger" onclick="clearSelection()">✕ Clear</button>
         </div>
         <div class="table-wrap">
@@ -521,7 +524,7 @@
           <div class="form-group"><label class="form-label">PMA Effective Date <span class="req" id="req-pma">*</span></label><input type="date" class="form-input" id="f-pma"></div>
           <div class="form-group"><label class="form-label">Primary Specialty <span class="req" id="req-specialty">*</span></label><select class="form-select" id="f-specialty"><option value="">Select...</option><option>Conventional</option><option>Affordable</option><option>Commercial</option></select></div>
           <div class="form-group"><label class="form-label">System <span class="req" id="req-system">*</span></label><select class="form-select" id="f-system"><option value="">Select...</option><option>RPM Yardi</option><option>RPM ONEsite</option><option>RPM Entrata</option><option>Client Hosted Yardi</option><option>Client Hosted ONEsite</option></select></div>
-          <div class="form-group"><label class="form-label">Status <span class="req" id="req-status">*</span></label><select class="form-select" id="f-status"><option value="">Select...</option><option>RPM Managed</option><option>Dispositioning</option></select></div>
+          <div class="form-group"><label class="form-label">Status <span class="req" id="req-status">*</span></label><select class="form-select" id="f-status"><option value="">Select...</option><option>RPM Managed</option><option>Dispo</option></select></div>
           <div class="form-group"><label class="form-label">Budget Due to Client per PMA <span class="info-icon">i<span class="tooltip-text">Client submission deadline</span></span> <span class="req" id="req-budget-due">*</span></label><input type="date" class="form-input" id="f-budget-due" oninput="calcMetPMA()"></div>
         </div>
       </div>
@@ -605,6 +608,19 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('bulk-modal')">Cancel</button>
       <button class="btn btn-copper" onclick="applyBulkEdit()">Apply to Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK DISPO CONFIRMATION MODAL -->
+<div class="year-switch-overlay" id="bulk-dispo-modal">
+  <div class="year-switch-modal">
+    <div class="year-switch-icon">🏠</div>
+    <div class="year-switch-title">Confirm Bulk Dispo</div>
+    <div class="year-switch-sub">You are about to mark <strong id="bulk-dispo-count"></strong> as <strong>Dispo</strong> and move them to the Dispo group in Monday. This cannot be undone from here.</div>
+    <div class="year-switch-actions">
+      <button class="btn btn-secondary" onclick="document.getElementById('bulk-dispo-modal').classList.remove('open')">Cancel</button>
+      <button class="btn-dispo" onclick="applyBulkDispo()">Confirm Dispo →</button>
     </div>
   </div>
 </div>
@@ -1610,6 +1626,9 @@ async function dispoProperty(id, name){
   if(!confirm(`Are you sure you want to dispo "${name}"?`)) return;
   showLoading('Moving to Dispo...');
   try{
+    if(COL.status){
+      await mondayQuery(`mutation { change_multiple_column_values(board_id:${BOARD_ID},item_id:${id},column_values:${JSON.stringify(JSON.stringify({[COL.status]:{label:'Dispo'}}))}) { id } }`);
+    }
     await mondayQuery(`mutation {
       move_item_to_group(item_id:${id}, group_id:"${siteGroupIds['dispo']}") { id }
     }`);
@@ -1620,6 +1639,33 @@ async function dispoProperty(id, name){
     hideLoading();
     showToast('Dispo failed: ' + e.message, 'error');
   }
+}
+
+function openBulkDispo(){
+  if(!selectedIds.size) return;
+  const n = selectedIds.size;
+  document.getElementById('bulk-dispo-count').textContent = n + ' propert' + (n===1?'y':'ies');
+  document.getElementById('bulk-dispo-modal').classList.add('open');
+}
+
+async function applyBulkDispo(){
+  document.getElementById('bulk-dispo-modal').classList.remove('open');
+  if(!siteGroupIds['dispo']){ showToast('Dispo group not found on Monday board','error'); return; }
+  showLoading(`Moving ${selectedIds.size} properties to Dispo...`);
+  const ids = [...selectedIds];
+  let success=0, failed=0;
+  for(const id of ids){
+    try{
+      if(COL.status){
+        await mondayQuery(`mutation { change_multiple_column_values(board_id:${BOARD_ID},item_id:${id},column_values:${JSON.stringify(JSON.stringify({[COL.status]:{label:'Dispo'}}))}) { id } }`);
+      }
+      await mondayQuery(`mutation { move_item_to_group(item_id:${id},group_id:"${siteGroupIds['dispo']}") { id } }`);
+      success++;
+    } catch{ failed++; }
+  }
+  clearSelection();
+  await loadItems();
+  showToast('Moved '+success+' propert'+(success===1?'y':'ies')+' to Dispo'+(failed>0?', '+failed+' failed':''), 'success');
 }
 // ============================================================
 // BULK EDIT
