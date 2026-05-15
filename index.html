@@ -396,8 +396,7 @@
         <div class="bulk-bar" id="bulk-bar">
           <span><span class="bulk-count" id="bulk-count">0</span> selected</span>
           <button class="btn btn-secondary" onclick="openBulkEdit()">✏️ Bulk Edit Dates</button>
-          <button class="btn-dispo" onclick="openBulkDispo()">🏠 Bulk Dispo</button>
-          <button class="btn btn-danger" onclick="clearSelection()">✕ Clear</button>
+<button class="btn btn-danger" onclick="clearSelection()">✕ Clear</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -612,18 +611,6 @@
   </div>
 </div>
 
-<!-- BULK DISPO CONFIRMATION MODAL -->
-<div class="year-switch-overlay" id="bulk-dispo-modal">
-  <div class="year-switch-modal">
-    <div class="year-switch-icon">🏠</div>
-    <div class="year-switch-title">Confirm Bulk Dispo</div>
-    <div class="year-switch-sub">You are about to mark <strong id="bulk-dispo-count"></strong> as <strong>Dispo</strong> and move them to the Dispo group in Monday. This cannot be undone from here.</div>
-    <div class="year-switch-actions">
-      <button class="btn btn-secondary" onclick="document.getElementById('bulk-dispo-modal').classList.remove('open')">Cancel</button>
-      <button class="btn-dispo" onclick="applyBulkDispo()">Confirm Dispo →</button>
-    </div>
-  </div>
-</div>
 
 <div class="loading-overlay" id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading...</div></div>
 <div class="toast-container" id="toast-container"></div>
@@ -1628,8 +1615,8 @@ async function dispoProperty(id, name){
   if(!confirm(`Are you sure you want to dispo "${name}"?`)) return;
   showLoading('Moving to Dispo...');
   try{
-    if(COL.status){
-      await mondayQuery(`mutation { change_multiple_column_values(board_id:${BOARD_ID},item_id:${id},column_values:${JSON.stringify(JSON.stringify({[COL.status]:dispoStatusVal()}))}) { id } }`);
+    if(COL.completionStatus){
+      await mondayQuery(`mutation { change_multiple_column_values(board_id:${BOARD_ID},item_id:${id},column_values:${JSON.stringify(JSON.stringify({[COL.completionStatus]:{label:'Dispo'}}))}) { id } }`);
     }
     await mondayQuery(`mutation {
       move_item_to_group(item_id:${id}, group_id:"${siteGroupIds['dispo']}") { id }
