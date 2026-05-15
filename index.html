@@ -391,6 +391,7 @@
             <option>RPM Managed</option>
             <option>Dispositioning</option>
           </select>
+          <button class="btn btn-secondary" onclick="loadItems()" title="Sync from Monday" style="flex-shrink:0;">🔄 Refresh</button>
         </div>
         <div class="bulk-bar" id="bulk-bar">
           <span><span class="bulk-count" id="bulk-count">0</span> selected</span>
@@ -816,6 +817,9 @@ async function launchTracker() {
     updateYearButtons();
     await loadItems();
     initActivitySession();
+    // Auto-refresh from Monday every hour
+    if(window._autoRefreshTimer) clearInterval(window._autoRefreshTimer);
+    window._autoRefreshTimer = setInterval(async () => { await loadItems(); }, 60 * 60 * 1000);
   } catch(e) {
     hideLoading();
     showToast('Connection failed: ' + e.message, 'error');
