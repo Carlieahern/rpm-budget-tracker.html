@@ -475,7 +475,7 @@
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button class="btn btn-secondary" onclick="testSettingsConnection()">🔌 Test Connection</button>
             <button class="btn btn-secondary" onclick="resyncMonday()">🔄 Re-sync from Monday</button>
-            <button class="btn btn-secondary" id="settings-backfill-btn" onclick="runBackfillFromSettings()">🔗 Backfill 2026 from 2027</button>
+            <button class="btn btn-secondary" id="settings-backfill-btn" onclick="runBackfillFromSettings()">🔗 Backfill Budget Due Dates</button>
           </div>
           <div id="settings-test-result" style="margin-top:12px;font-size:12px;"></div>
         </div>
@@ -1104,149 +1104,96 @@ async function loadItems() {
 // BACKFILL 2026 FROM 2027
 // ============================================================
 async function runBackfill() {
-  if (!confirm('This will look for matching properties between 2026 and 2027 and fill in any blank static fields in 2026 from 2027 data.\n\nBudget timeline dates will NOT be changed.\n\nContinue?')) return;
+  // Determine available year groups dynamically
+  const years = Object.keys(siteGroupIds).filter(k => !isNaN(k)).map(Number).sort();
+  if (years.length < 2) { showToast('Need at least 2 year groups to run backfill', 'error'); return; }
 
-  showLoading('Loading 2027 data for backfill...');
+  const sourceYear = years[years.length - 2]; // e.g. 2026
+  const targetYear = years[years.length - 1]; // e.g. 2027
+  const sourceGroup = siteGroupIds[sourceYear];
+  const targetGroup = siteGroupIds[targetYear];
+
+  if (!COL.budgetDue) { showToast('"Budget Due to Client per PMA" column not found', 'error'); return; }
+  if (!confirm(`This will copy the "Budget Due to Client per PMA" date from ${sourceYear} to matching ${targetYear} properties, moving the date forward by 1 year.\n\nExisting dates in ${targetYear} will be overwritten.\n\nContinue?`)) return;
+
+  // Helper: load all items from a specific group
+  const loadGroup = async (groupId, label) => {
+    showLoading(`Loading ${label} properties...`);
+    let items = [], cursor = null, hasMore = true;
+    while (hasMore) {
+      const cp = cursor ? `, cursor: "${cursor}"` : '';
+      const data = await mondayQuery(`{
+        boards(ids: ${BOARD_ID}) {
+          items_page(limit:500${cp}) {
+            cursor items { id group { id } name column_values { id text } }
+          }
+        }
+      }`);
+      const page = data.boards[0].items_page;
+      items = items.concat(page.items.filter(i => i.group && i.group.id === groupId));
+      cursor = page.cursor;
+      hasMore = !!cursor;
+    }
+    return items;
+  };
 
   try {
-    const group2027 = siteGroupIds[2027];
-    if (!group2027) { hideLoading(); showToast('2027 group not found', 'error'); return; }
+    const sourceItems = await loadGroup(sourceGroup, sourceYear);
+    const targetItems = await loadGroup(targetGroup, targetYear);
 
-    // Load 2027 items
-    let items27 = [];
-    let cursor = null;
-    let hasMore = true;
-    while (hasMore) {
-      const cp = cursor ? `, cursor: "${cursor}"` : '';
-      const data = await mondayQuery(`{
-        boards(ids: ${BOARD_ID}) {
-          items_page(limit:500${cp}) {
-            cursor items { id group { id } name column_values { id text } }
-          }
-        }
-      }`);
-      const page = data.boards[0].items_page;
-      items27 = items27.concat(page.items.filter(i => i.group && i.group.id === group2027));
-      cursor = page.cursor;
-      hasMore = !!cursor;
-    }
-
-    // Build 2027 lookup maps
-    const by27Name = {};
-    const by27Code = {};
-    items27.forEach(item => {
+    // Build source lookup by name and property code
+    const byName = {}, byCode = {};
+    sourceItems.forEach(item => {
       const cv = {};
       item.column_values.forEach(c => { cv[c.id] = c.text || ''; });
-      const code = cv[COL.code] || '';
-      const entry = { id: item.id, name: item.name, code, specialty: cv[COL.specialty] || '', system: cv[COL.system] || '', pmaDate: cv[COL.pmaDate] || '', owner: cv[COL.owner] || '', cm: cv[COL.cm] || '', srcm: cv[COL.srcm] || '', rm: cv[COL.rm] || '', srrm: cv[COL.srrm] || '', rvp: cv[COL.rvp] || '', svp: cv[COL.svp] || '', status: cv[COL.status] || '', budgetDue: cv[COL.budgetDue] || '' };
-      by27Name[item.name.toLowerCase().trim()] = entry;
-      if (code) by27Code[code.toLowerCase().trim()] = entry;
+      const budgetDue = cv[COL.budgetDue] || '';
+      if (!budgetDue) return;
+      const code = COL.code ? (cv[COL.code] || '').toLowerCase().trim() : '';
+      const normName = item.name.toLowerCase().trim();
+      byName[normName] = budgetDue;
+      if (code) byCode[code] = budgetDue;
     });
 
-    // Static fields to backfill (never touch timeline fields)
-    const staticFields = ['specialty', 'system', 'pmaDate', 'owner', 'cm', 'srcm', 'rm', 'srrm', 'rvp', 'svp', 'status', 'code'];
-    const colMap = { specialty: COL.specialty, system: COL.system, pmaDate: COL.pmaDate, owner: COL.owner, cm: COL.cm, srcm: COL.srcm, rm: COL.rm, srrm: COL.srrm, rvp: COL.rvp, svp: COL.svp, status: COL.status, code: COL.code };
+    // Helper: normalize name for near-match (strip common prefixes/suffixes)
+    const normalizeName = n => n.toLowerCase().trim().replace(/^(the |at |of )/,'').replace(/\s+/g,' ');
 
-    // Load current 2026 items
-    const group2026 = siteGroupIds[2026];
-    if (!group2026) { hideLoading(); showToast('2026 group not found', 'error'); return; }
+    showLoading(`Backfilling ${targetYear} Budget Due dates from ${sourceYear}...`);
+    let updated = 0, noMatch = 0, failed = 0;
 
-    let items26 = [];
-    cursor = null; hasMore = true;
-    while (hasMore) {
-      const cp = cursor ? `, cursor: "${cursor}"` : '';
-      const data = await mondayQuery(`{
-        boards(ids: ${BOARD_ID}) {
-          items_page(limit:500${cp}) {
-            cursor items { id group { id } name column_values { id text } }
-          }
-        }
-      }`);
-      const page = data.boards[0].items_page;
-      items26 = items26.concat(page.items.filter(i => i.group && i.group.id === group2026));
-      cursor = page.cursor;
-      hasMore = !!cursor;
-    }
+    for (const item of targetItems) {
+      const cv = {};
+      item.column_values.forEach(c => { cv[c.id] = c.text || ''; });
+      const name = item.name.toLowerCase().trim();
+      const code = COL.code ? (cv[COL.code] || '').toLowerCase().trim() : '';
 
-    let updated = 0, skipped = 0;
-    showLoading('Backfilling 2026 from 2027...');
-
-    for (const item26 of items26) {
-      const cv26 = {};
-      item26.column_values.forEach(c => { cv26[c.id] = c.text || ''; });
-      const name26 = item26.name.toLowerCase().trim();
-      const code26 = (cv26[COL.code] || '').toLowerCase().trim();
-
-      // Find match
-      let match = by27Name[name26] || (code26 ? by27Code[code26] : null);
-      if (!match) { skipped++; continue; }
-
-      // Build update payload — only blank fields in 2026
-      const updates = {};
-      staticFields.forEach(field => {
-        const colId = colMap[field];
-        if (!colId) return;
-        const val26 = cv26[colId] || '';
-        const val27 = match[field] || '';
-        if (!val26 && val27) updates[colId] = val27;
-      });
-      // Budget Due to Client per PMA — copy from 2026 group INTO 2027 group as-is
-      // The approval date is always in 2026 (before the budget year starts)
-      // This runs separately after the main 2026 item loop below
-
-      if (Object.keys(updates).length === 0) { skipped++; continue; }
-
-      const result = await mondayQuery(`mutation { change_simple_column_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(name)}) { id } }`);
-      console.log('Updated item', item26.id, item26.name, updates);
-      updated++;
-    }
-
-    // ── Second pass: push Budget Due to Client per PMA from 2026 → 2027 ──
-    // The PMA deadline is approved in 2026 (before budget year starts)
-    // so 2027 items should carry the same 2026 date
-    showLoading('Syncing Budget Due dates from 2026 to 2027...');
-    let pmaUpdated = 0;
-    if (COL.budgetDue && group2027) {
-      // Build 2026 lookup by name and code with budgetDue value
-      const by26Name = {};
-      const by26Code = {};
-      items26.forEach(item => {
-        const cv = {};
-        item.column_values.forEach(c => { cv[c.id] = c.text || ''; });
-        const budgetDue = cv[COL.budgetDue] || '';
-        const code = cv[COL.code] || '';
-        if (budgetDue) {
-          by26Name[item.name.toLowerCase().trim()] = { budgetDue, code };
-          if (code) by26Code[code.toLowerCase().trim()] = { budgetDue };
-        }
-      });
-
-      // Update matching 2027 items
-      for (const item27 of items27) {
-        const cv27 = {};
-        item27.column_values.forEach(c => { cv27[c.id] = c.text || ''; });
-        // Always overwrite — ensures year is correctly incremented
-
-        const name27 = item27.name.toLowerCase().trim();
-        const code27 = (cv27[COL.code] || '').toLowerCase().trim();
-        const match26 = by26Name[name27] || (code27 ? by26Code[code27] : null);
-        if (!match26 || !match26.budgetDue) continue;
-
-        const pmaUpdate = {};
-        // Increment year by 1 (e.g. 2025 → 2026 for the 2027 budget cycle)
-        const srcDate = match26.budgetDue;
-        const yearIncremented = srcDate.replace(/^(\d{4})/, (y) => String(parseInt(y) + 1));
-        pmaUpdate[COL.budgetDue] = {date: yearIncremented};
-        await mondayQuery(`mutation { change_simple_column_value(board_id:${BOARD_ID},item_id:${editId},column_id:"name",value:${JSON.stringify(name)}) { id } }`);
-        console.log('PMA date synced to 2027 item', item27.name, match26.budgetDue);
-        pmaUpdated++;
+      // Match: exact name → exact code → near name
+      let srcDate = byName[name] || (code ? byCode[code] : null);
+      if (!srcDate) {
+        // Near-match: normalized name
+        const norm = normalizeName(item.name);
+        srcDate = Object.entries(byName).find(([k]) => normalizeName(k) === norm)?.[1] || null;
       }
+
+      if (!srcDate) { noMatch++; continue; }
+
+      // Increment year by 1
+      const newDate = srcDate.replace(/^(\d{4})/, (_, y) => String(parseInt(y) + 1));
+
+      try {
+        await mondayQuery(`mutation {
+          change_multiple_column_values(board_id:${BOARD_ID},item_id:${item.id},column_values:${JSON.stringify(JSON.stringify({[COL.budgetDue]:{date:newDate}}))}) { id }
+        }`);
+        updated++;
+      } catch(e) { failed++; }
     }
 
     hideLoading();
     await loadItems();
-    showToast(`Backfill complete — ${updated} updated, ${pmaUpdated} PMA dates synced to 2027, ${skipped} skipped`, 'success');
-  } catch (err) {
+    showToast(
+      `Backfill complete — ${updated} updated, ${noMatch} no match found${failed > 0 ? ', ' + failed + ' failed' : ''}`,
+      updated > 0 ? 'success' : 'error'
+    );
+  } catch(err) {
     hideLoading();
     showToast('Backfill failed: ' + err.message, 'error');
   }
